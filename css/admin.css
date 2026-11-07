@@ -1,0 +1,777 @@
+/* ==========================================================================
+   RUPAMS - Admin Web Portal Styles (Desktop-Focused)
+   Real-Time Dashboards, Automated Scheduling, Key Cabinet & Audit Engine
+   ========================================================================== */
+
+.admin-layout {
+  display: flex;
+  flex: 1;
+  min-height: calc(100vh - 67px);
+}
+
+/* Sidebar Navigation */
+.admin-sidebar {
+  width: 250px;
+  background: white;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-nav {
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  color: #475569;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.nav-item:hover {
+  background-color: var(--bg-card-alt);
+  color: var(--urs-navy);
+}
+
+.nav-item.active {
+  background: var(--urs-blue-light);
+  color: var(--urs-navy);
+  font-weight: 700;
+}
+
+.nav-item .nav-icon {
+  font-size: 1.15rem;
+  width: 24px;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.nav-badge {
+  margin-left: auto;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+}
+
+.nav-badge.badge-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card-alt);
+}
+
+.system-tag {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Main Admin Workspace */
+.admin-content {
+  flex: 1;
+  padding: 24px 32px;
+  background-color: var(--bg-main);
+  overflow-y: auto;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.section-header h2 {
+  font-size: 1.45rem;
+  color: var(--urs-navy-dark);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-header p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* KPI Summary Cards Grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin-bottom: 26px;
+}
+
+.kpi-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi-info span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.kpi-info h3 {
+  font-size: 1.8rem;
+  color: var(--urs-navy-dark);
+  font-weight: 800;
+  margin-top: 4px;
+  line-height: 1;
+}
+
+.kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.kpi-card.kpi-blue .kpi-icon { background: #eff6ff; color: #2563eb; }
+.kpi-card.kpi-green .kpi-icon { background: #ecfdf5; color: #059669; }
+.kpi-card.kpi-amber .kpi-icon { background: #fffbeb; color: #d97706; }
+.kpi-card.kpi-red .kpi-icon { background: #fef2f2; color: #dc2626; }
+.kpi-card.kpi-purple .kpi-icon { background: #f5f3ff; color: #7c3aed; }
+
+/* Filter Bar */
+.filter-toolbar {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.filter-pill.active {
+  background: var(--urs-navy);
+  color: white;
+  border-color: var(--urs-navy);
+}
+
+/* Facility Room Cards Grid */
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 18px;
+  margin-bottom: 30px;
+}
+
+.room-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.room-card:hover {
+  border-color: #93c5fd;
+  box-shadow: var(--shadow-md);
+}
+
+.room-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.room-card.status-available::before { background: var(--status-available); }
+.room-card.status-occupied::before { background: var(--status-occupied); }
+.room-card.status-reserved::before { background: var(--status-reserved); }
+.room-card.status-overdue::before { background: var(--status-overdue); }
+
+.room-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.room-code-tag {
+  font-family: ui-monospace, monospace;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--urs-navy-dark);
+}
+
+.room-type-tag {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.room-title {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.room-location {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.room-occupancy-box {
+  background: var(--bg-card-alt);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border-color);
+  font-size: 0.82rem;
+}
+
+.room-occupancy-box.alert-overdue {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.occupant-name {
+  font-weight: 700;
+  display: block;
+}
+
+.occupant-detail {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.room-card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.key-tag-info {
+  font-size: 0.75rem;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ==========================================================================
+   Automated Timetable Generation & Matrix Grid View
+   ========================================================================== */
+
+.timetable-control-panel {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.timetable-stats-strip {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--urs-blue-light);
+  border: 1px solid #bfdbfe;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  color: #1e40af;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.stat-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--urs-navy-dark);
+}
+
+.timetable-matrix-container {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 30px;
+}
+
+.timetable-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+  font-size: 0.85rem;
+}
+
+.timetable-matrix th,
+.timetable-matrix td {
+  border: 1px solid var(--border-color);
+  padding: 10px 12px;
+  vertical-align: top;
+}
+
+.timetable-matrix th {
+  background: var(--urs-navy-dark);
+  color: white;
+  font-weight: 700;
+  text-align: center;
+}
+
+.timetable-matrix th.time-col-header {
+  width: 130px;
+}
+
+.time-slot-label {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--urs-navy);
+  font-size: 0.78rem;
+  background: var(--bg-card-alt);
+  text-align: center;
+}
+
+.schedule-slot-cell {
+  background: #f8fafc;
+  min-height: 80px;
+  transition: background var(--transition-fast);
+}
+
+.schedule-slot-cell:hover {
+  background: #f1f5f9;
+}
+
+.schedule-card-block {
+  background: white;
+  border-left: 4px solid var(--urs-blue);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  box-shadow: var(--shadow-sm);
+  font-size: 0.78rem;
+}
+
+.schedule-card-block.type-auto { border-left-color: #ea580c; }
+.schedule-card-block.type-elx { border-left-color: #0284c7; }
+.schedule-card-block.type-elec { border-left-color: #eab308; }
+.schedule-card-block.type-comp { border-left-color: #10b981; }
+.schedule-card-block.type-mech { border-left-color: #6366f1; }
+
+.schedule-card-course {
+  font-weight: 800;
+  color: var(--urs-navy-dark);
+  display: block;
+}
+
+.schedule-card-faculty {
+  color: #475569;
+  font-size: 0.74rem;
+}
+
+.schedule-card-room {
+  display: inline-block;
+  background: #e2e8f0;
+  color: #1e293b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-top: 3px;
+}
+
+/* ==========================================================================
+   Real-Time Conflict Detection Sandbox View
+   ========================================================================== */
+
+.conflict-detector-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 28px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.form-control {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  color: var(--text-main);
+  background: white;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.form-control:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.conflict-result-banner {
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: 0.88rem;
+}
+
+.conflict-result-banner.banner-success {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.conflict-result-banner.banner-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.conflict-details-list {
+  margin-top: 8px;
+  padding-left: 20px;
+  font-size: 0.82rem;
+}
+
+/* ==========================================================================
+   Digital Review and Approval Workflow Stepper
+   ========================================================================== */
+
+.workflow-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+}
+
+.workflow-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 24px 0 32px 0;
+  position: relative;
+}
+
+.workflow-stepper::before {
+  content: "";
+  position: absolute;
+  top: 20px;
+  left: 30px;
+  right: 30px;
+  height: 4px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.step-item {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 140px;
+}
+
+.step-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid #cbd5e1;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+  transition: all var(--transition-fast);
+}
+
+.step-item.completed .step-circle {
+  background: var(--status-available);
+  border-color: var(--status-available);
+  color: white;
+}
+
+.step-item.active .step-circle {
+  background: var(--urs-blue);
+  border-color: var(--urs-gold);
+  color: white;
+  box-shadow: 0 0 0 4px rgba(245, 179, 36, 0.3);
+}
+
+.step-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.step-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.audit-history-timeline {
+  border-left: 2px solid #e2e8f0;
+  padding-left: 20px;
+  margin-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timeline-event {
+  position: relative;
+}
+
+.timeline-event::before {
+  content: "";
+  position: absolute;
+  left: -26px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--urs-blue);
+  border: 2px solid white;
+}
+
+/* ==========================================================================
+   Key Cabinet View & Master Key Registry Table
+   ========================================================================== */
+
+.key-cabinet-visual {
+  background: #1e293b;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 26px;
+  color: white;
+}
+
+.cabinet-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cabinet-hooks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
+}
+
+.cabinet-hook-slot {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  padding: 12px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cabinet-hook-slot:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--urs-gold);
+}
+
+.hook-peg {
+  width: 16px;
+  height: 16px;
+  background: #94a3b8;
+  border-radius: 50%;
+  margin: 0 auto 8px auto;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.cabinet-hook-slot.slot-present .hook-peg {
+  background: var(--status-available);
+  box-shadow: 0 0 8px var(--status-available);
+}
+
+.cabinet-hook-slot.slot-borrowed .hook-peg {
+  background: var(--status-occupied);
+}
+
+.cabinet-hook-slot.slot-overdue .hook-peg {
+  background: var(--status-overdue);
+  animation: pulse-red 1.2s infinite;
+}
+
+.hook-key-code {
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.hook-key-slot {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+/* Master Data Tables */
+.data-table-container {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.data-table th {
+  background: var(--bg-card-alt);
+  color: #475569;
+  font-weight: 700;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.data-table tr:hover {
+  background: #f8fafc;
+}
+
+/* Event Badges */
+.badge-event {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.badge-event.KEY_CHECKOUT { background: #dbeafe; color: #1e40af; }
+.badge-event.KEY_RETURN { background: #d1fae5; color: #065f46; }
+.badge-event.KEY_OVERDUE { background: #fee2e2; color: #b91c1c; }
+.badge-event.REQUEST_APPROVED { background: #fef3c7; color: #92400e; }
+.badge-event.SCHEDULE_GENERATED { background: #ede9fe; color: #5b21b6; }

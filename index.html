@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RUPAMS - Room Utilization & Physical Access Management System | URS Morong</title>
+  
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/mobile.css">
+</head>
+<body>
+
+  <!-- ==========================================================================
+       GLOBAL TOP NAVIGATION HEADER
+       ========================================================================== -->
+  <header class="global-header">
+    <div class="brand-section">
+      <div class="urs-logo-badge" title="University of Rizal System Morong Campus">
+        CIT
+      </div>
+      <div class="brand-info">
+        <h1>
+          RUPAMS
+          <span style="font-size: 0.72rem; background: var(--urs-gold); color: var(--urs-navy-dark); padding: 1px 6px; border-radius: 4px; font-weight: 800;">v1.0 THESIS</span>
+        </h1>
+        <span class="tagline">University of Rizal System Morong • College of Industrial Technology</span>
+      </div>
+    </div>
+
+    <!-- Live Philippine Standard Time Clock Widget -->
+    <div class="header-center-metrics">
+      <div class="clock-widget" title="Live Campus Time Clock">
+        <div>
+          <div class="clock-time" id="liveClockTime">--:--:-- --</div>
+          <div class="clock-meta" id="liveClockDate">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Overdue Key Alert Warning Badge -->
+      <div class="overdue-alert-chip" id="overdueAlertChip" onclick="appUi.switchAdminTab('keys')" title="Click to view overdue key log">
+        <span>🚨</span>
+        <span>OVERDUE KEY: <strong id="overdueCountNumber">0</strong></span>
+      </div>
+    </div>
+
+    <!-- Right Controls: View Switcher & Demo User Profile -->
+    <div class="header-controls">
+      <!-- Sound FX Toggle -->
+      <button class="btn-icon" id="btnSoundToggle" title="Toggle Sound Feedback">🔊</button>
+
+      <!-- Frame Toggle for Mobile View -->
+      <button class="btn btn-outline btn-sm hidden" id="btnToggleFrame" title="Toggle Phone Mockup Bezel" style="color: white; border-color: rgba(255,255,255,0.3);">
+        📱 Device Bezel
+      </button>
+
+      <!-- View Switcher: Admin Portal vs Mobile App -->
+      <div class="view-mode-toggle">
+        <button id="btnAdminView" class="active">
+          <span>🖥️</span> Admin Portal
+        </button>
+        <button id="btnMobileView">
+          <span>📱</span> Mobile App
+        </button>
+      </div>
+
+      <!-- User Profile Preset Switcher -->
+      <div class="user-profile-badge" id="userProfileTrigger" title="Click to switch persona (Admin / Faculty / Student)">
+        <div class="avatar-circle" id="headerUserAvatar">LF</div>
+        <div class="user-details">
+          <span class="user-name" id="headerUserName">Dr. Liezel Fernando</span>
+          <span class="user-role-badge" id="headerUserRole">ADMIN</span>
+        </div>
+        <span style="font-size: 0.7rem; color: #94a3b8;">▼</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       VIEW CONTAINER 1: ADMIN WEB PORTAL (DESKTOP-FOCUSED)
+       ========================================================================== -->
+  <main id="adminPortalContainer" class="admin-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="admin-sidebar">
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-tab="dashboard">
+          <span class="nav-icon">📊</span>
+          <span>Room Monitoring</span>
+        </button>
+
+        <button class="nav-item" data-tab="scheduler">
+          <span class="nav-icon">🗓️</span>
+          <span>Timetable Generator</span>
+        </button>
+
+        <button class="nav-item" data-tab="conflicts">
+          <span class="nav-icon">🛡️</span>
+          <span>Conflict Detection</span>
+        </button>
+
+        <button class="nav-item" data-tab="workflow">
+          <span class="nav-icon">✍️</span>
+          <span>Review & Approvals</span>
+        </button>
+
+        <button class="nav-item" data-tab="keys">
+          <span class="nav-icon">🔑</span>
+          <span>Key Registry & Cabinet</span>
+        </button>
+
+        <button class="nav-item" data-tab="audit">
+          <span class="nav-icon">📜</span>
+          <span>Incident Tracing</span>
+        </button>
+
+        <button class="nav-item" data-tab="settings">
+          <span class="nav-icon">⚙️</span>
+          <span>System & Database</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="system-tag">
+          <strong>URS Morong Campus</strong><br>
+          CIT Undergraduate Thesis<br>
+          Physical Access Platform
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Content Area -->
+    <section class="admin-content" id="adminDynamicContent">
+      <!-- Dynamically rendered by appUi.renderAdminView() -->
+    </section>
+  </main>
+
+  <!-- ==========================================================================
+       VIEW CONTAINER 2: MOBILE WEB APP (STUDENTS & FACULTY)
+       ========================================================================== -->
+  <main id="mobileAppContainer" class="mobile-wrapper-outer hidden">
+    <div class="mobile-device-frame">
+      <div class="mobile-screen">
+        <!-- Phone Hardware Top Status Bar -->
+        <div class="phone-status-bar">
+          <span>9:41</span>
+          <div class="phone-dynamic-island"></div>
+          <span>5G 📶 100%</span>
+        </div>
+
+        <!-- Mobile App Header -->
+        <header class="mobile-app-header">
+          <div class="mobile-header-top">
+            <span class="mobile-portal-title">URS CIT Access Portal</span>
+            <button class="btn btn-gold btn-sm" onclick="QRNfcSimulator.openQrScannerModal()" style="padding: 3px 8px; font-size: 0.72rem;">
+              📷 Scan
+            </button>
+          </div>
+
+          <div class="mobile-user-greeting">
+            <div class="avatar-circle" id="mobileGreetingAvatar">JD</div>
+            <div class="greeting-text">
+              <h4 id="mobileGreetingName">Juan Dela Cruz</h4>
+              <span id="mobileGreetingRole">STUDENT • BSIT Electronics</span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Scrollable Mobile Body Content -->
+        <div class="mobile-screen-body" id="mobileDynamicBody">
+          <!-- Dynamically rendered by appUi.renderMobileView() -->
+        </div>
+
+        <!-- Mobile Bottom Navigation Bar -->
+        <nav class="mobile-bottom-nav">
+          <button class="mobile-nav-btn active" data-tab="facilities">
+            <span class="nav-btn-icon">🏛️</span>
+            <span>Facilities</span>
+          </button>
+          <button class="mobile-nav-btn" data-tab="borrow">
+            <span class="nav-btn-icon">📝</span>
+            <span>Borrow</span>
+          </button>
+          <button class="mobile-nav-btn" data-tab="active">
+            <span class="nav-btn-icon">🔑</span>
+            <span>Active Key</span>
+          </button>
+          <button class="mobile-nav-btn" data-tab="scan">
+            <span class="nav-btn-icon">📡</span>
+            <span>Scan/NFC</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==========================================================================
+       MODAL 1: NFC IDENTIFICATION & KEY TAP SIMULATOR
+       ========================================================================== -->
+  <div class="modal-overlay" id="nfcModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="nfcModalTitle">📡 NFC Key Identification & Custody Reader</h3>
+        <button class="btn-close-modal" onclick="QRNfcSimulator.closeNfcModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="nfc-reader-scanner-box">
+          <div class="nfc-wave-graphic">
+            <div class="nfc-wave-ring"></div>
+            <div class="nfc-wave-ring"></div>
+            <div class="nfc-wave-ring"></div>
+            <div class="nfc-center-icon">📡</div>
+          </div>
+          <h4 style="color: var(--urs-gold); font-size: 1.05rem; margin-bottom: 4px;">Smart Solenoid / NFC Sensor</h4>
+          <p id="nfcModalDesc" style="font-size: 0.8rem; color: #cbd5e1;">
+            Tap physical RFID/NFC key tag against reader to transfer custody and log immutable audit record.
+          </p>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <h5 style="font-size: 0.82rem; color: #475569; text-transform: uppercase; margin-bottom: 10px;">Select Physical Key Tag to Tap:</h5>
+          <div id="nfcKeyList" style="max-height: 280px; overflow-y: auto;">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="QRNfcSimulator.closeNfcModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 2: CAMERA QR CODE SCANNER & RAPID PRESETS
+       ========================================================================== -->
+  <div class="modal-overlay" id="qrScannerModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>📷 Multi-Modal QR Code Scanner</h3>
+        <button class="btn-close-modal" onclick="QRNfcSimulator.closeQrScannerModal()">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <!-- Live Video Viewport -->
+        <div class="qr-viewport-box">
+          <video id="qrVideoElement" playsinline autoplay muted></video>
+          <div class="qr-target-guide">
+            <div class="qr-laser-line"></div>
+          </div>
+        </div>
+
+        <div id="qrCameraStatus" style="font-size: 0.82rem; color: #64748b; margin-bottom: 16px;">
+          Starting camera... If no webcam is available, use Rapid Test Presets below.
+        </div>
+
+        <div style="background: var(--bg-card-alt); border-radius: var(--radius-md); padding: 14px; text-align: left; border: 1px solid var(--border-color);">
+          <strong style="font-size: 0.82rem; color: var(--urs-navy);">⚡ Quick Test Presets (Instant Simulation):</strong>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+            <button class="btn btn-outline btn-sm" onclick="QRNfcSimulator.simulateQRScan('pass_juan')">
+              Scan Student Pass: Juan Dela Cruz (CIT-ELX)
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="QRNfcSimulator.simulateQRScan('key_cit101')">
+              Scan Key Tag: CIT-101 Lecture Master Key
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="QRNfcSimulator.simulateQRScan('key_auto_overdue')">
+              Scan Key Tag: CIT-AUTO (Return Overdue Key)
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="QRNfcSimulator.closeQrScannerModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 3: GENERIC INSPECTION / KEY DETAILS MODAL
+       ========================================================================== -->
+  <div class="modal-overlay" id="genericDetailModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="genericModalTitle">Facility Details</h3>
+        <button class="btn-close-modal" onclick="appUi.closeModal('genericDetailModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="genericModalBody">
+        <!-- Injected via appUi.openRoomDetailModal -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="appUi.closeModal('genericDetailModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 4: DEMO USER SWITCHER MODAL
+       ========================================================================== -->
+  <div class="modal-overlay" id="userSwitcherModal">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>👤 Switch Evaluation Persona</h3>
+        <button class="btn-close-modal" onclick="appUi.closeModal('userSwitcherModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">
+          Select a role to test role-based permissions and simulated mobile workflows:
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Admin -->
+          <div class="nfc-tag-card" onclick="appUi.selectUserPreset('admin')" style="cursor: pointer;">
+            <div class="avatar-circle" style="background: #2563eb;">LF</div>
+            <div style="flex: 1; margin-left: 12px; text-align: left;">
+              <strong>Dr. Liezel Fernando</strong>
+              <div style="font-size: 0.72rem; color: #64748b;">CIT Scheduling Admin / Security Controller</div>
+            </div>
+            <span class="status-pill occupied">ADMIN</span>
+          </div>
+
+          <!-- Faculty -->
+          <div class="nfc-tag-card" onclick="appUi.selectUserPreset('faculty')" style="cursor: pointer;">
+            <div class="avatar-circle" style="background: #059669;">MB</div>
+            <div style="flex: 1; margin-left: 12px; text-align: left;">
+              <strong>Engr. Maria Elena Bautista</strong>
+              <div style="font-size: 0.72rem; color: #64748b;">Program Head, Electronics Technology</div>
+            </div>
+            <span class="status-pill available">FACULTY</span>
+          </div>
+
+          <!-- Student -->
+          <div class="nfc-tag-card" onclick="appUi.selectUserPreset('student')" style="cursor: pointer;">
+            <div class="avatar-circle" style="background: #f59e0b;">JD</div>
+            <div style="flex: 1; margin-left: 12px; text-align: left;">
+              <strong>Juan Dela Cruz</strong>
+              <div style="font-size: 0.72rem; color: #64748b;">3rd Year BSIT Electronics Student</div>
+            </div>
+            <span class="status-pill reserved">STUDENT</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="appUi.closeModal('userSwitcherModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer"></div>
+
+  <!-- ==========================================================================
+       JAVASCRIPT MODULES
+       ========================================================================== -->
+  <script src="js/audio.js"></script>
+  <script src="js/mockData.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/scheduler.js"></script>
+  <script src="js/keyManagement.js"></script>
+  <script src="js/qrNfcSim.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
