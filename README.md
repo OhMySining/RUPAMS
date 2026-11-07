@@ -1,69 +1,70 @@
 # Room Utilization and Physical Access Management System (RUPAMS)
 
-Developed as an undergraduate thesis project for the **University of Rizal System (URS) Morong Campus**, **College of Industrial Technology (CIT)**.
+**Undergraduate Thesis Project**  
+**University of Rizal System (URS) Morong Campus — College of Industrial Technology (CIT)**
 
-RUPAMS bridges institutional facility scheduling and physical key security by separating functionality into an **Admin Web Portal** (desktop-focused for centralized scheduling, automated conflict prevention, and real-time dashboards) and a **Mobile Web App** (for students and faculty handling digital borrowing requests, returns, and simulated NFC/QR multi-modal key transactions). Built purely with frontend web technologies (HTML5, CSS3, and JavaScript), state and application data are handled client-side using reactive LocalStorage persistence.
-
----
-
-## 🏛️ Institutional Context
-
-* **Institution:** University of Rizal System (URS)
-* **Campus:** Morong Campus, Rizal, Philippines
-* **Department:** College of Industrial Technology (CIT)
-* **Facilities Covered:**
-  * Lecture Halls (CIT 101, CIT 102, CIT 103)
-  * Computer & CADD Laboratories (CIT CompLab 1, CIT CompLab 2)
-  * Electronics & Robotics Laboratory (CIT-ELX)
-  * Electrical Workshop & Motor Controls (CIT-ELEC)
-  * Automotive Technology Service Bay (CIT-AUTO)
-  * Mechanical Fabrication & Welding Shop (CIT-MECH)
-  * Food Service & Hospitality Lab (CIT-FSM)
+A lightweight, purely web-based platform bridging institutional facility scheduling, physical key security, and laboratory incident management.
 
 ---
 
-## 🚀 Key System Modules & Features
+## 🎨 Minimalist Light Design System
 
-### 1. Admin Web Portal (Desktop)
-* **Centralized Real-Time Room Monitoring Dashboard:**
-  * Live visibility of facility utilization: *Available*, *Occupied*, *Reserved*, or *Overdue*.
-  * Instant room status indicators with live occupant tracking and scheduled class timetables.
-* **Automated Timetable Generation Module:**
-  * Eliminates manual schedule plotting in Microsoft Excel with a 1-click constraint-satisfaction scheduling engine.
-  * Ingests faculty workloads, room capacities, and equipment requirements to generate conflict-free class matrices.
-* **Real-Time Conflict Detection & Double-Occupancy Prevention:**
-  * Cross-references active database constraints in real-time.
-  * Detects and blocks room double-bookings, faculty scheduling overlaps, and section collisions.
-* **Digital Review and Approval Workflow Portal:**
-  * Multi-stage review lifecycle: `Draft` ➔ `Program Head Review` ➔ `Dean Approval` ➔ `Official Published`.
-  * Preserves review audit trails and timestamped administrative endorsements.
-* **Digital Key Registry & Smart Cabinet Monitor:**
-  * Replaces vulnerable paper logbooks with a centralized digital tracking registry.
-  * Visual representation of physical key cabinet hooks (Slots #01 to #10) with real-time custody states.
-* **Rapid Incident Tracing & Digital History Logs:**
-  * Forensic query engine allowing campus security and administrators to filter access logs by room, date range, or keyword to instantly trace who held the key during specific operational windows.
-* **Automated Overdue Key Tracking & Alerts:**
-  * Background monitoring scheduler running continuous interval checks that flags overdue keys, calculates overdue minutes, and dispatches sound/visual alerts.
-
-### 2. Mobile Web App (Students & Faculty)
-* **Digital Key Borrowing Requests:**
-  * Allows students and faculty to submit borrowing requests directly from mobile devices, specifying room, purpose, expected duration, and faculty endorsement.
-* **Digital Key Pass & Dynamic QR Code:**
-  * Displays an authorized digital pass ticket with dynamic vector QR code validation tokens and real-time return countdown timer.
-* **NFC Key Identification & Virtual Tap Simulator:**
-  * Simulates physical NFC RFID key tag scanning with Web Audio sound synthesis, haptic wave visual animations, and support for hardware Web NFC API (`NDEFReader`).
-* **Instant Returns & Overdue Resolution:**
-  * One-touch return verification that instantly logs custody back to the smart cabinet slot and clears facility occupancy.
+The application strictly focuses on **3 clean, cohesive colors** without flashy gradients or bright distractions:
+1. **Base Light Neutral:** Off-White / Clean Slate (`#f8fafc`, `#ffffff`, `#e2e8f0`)
+2. **Deep Slate Navy (Primary):** Structure, headers, active navigation, primary buttons (`#1e3a5f`)
+3. **Muted Slate (Secondary):** Secondary labels, table headers, metadata (`#475569`, `#64748b`)
+* *Functional status indicators:* Soft Green (`#16a34a`) for available, Soft Red (`#dc2626`) for occupied/problem, Soft Amber (`#d97706`) for review/pending.
 
 ---
 
-## 🛠️ Tech Stack
+## 📱 1. Mobile Web App (Students & Faculty)
 
-* **Frontend:** Vanilla HTML5, CSS3 (Custom Responsive Layouts with URS Morong Theme Tokens), JavaScript (ES6 Modules)
-* **Audio Feedback:** Web Audio API (Synthesized high-frequency NFC chimes, laser scan tones, and overdue alarms with zero external asset dependencies)
-* **Camera / QR:** WebRTC `getUserMedia` with HTML5 Canvas / `BarcodeDetector` API and client-side vector SVG QR rendering
-* **Data Persistence:** Client-side JavaScript LocalStorage with JSON backup export, import, and default database reset
-* **Version Control:** Git & GitHub
+The mobile view is strictly limited to the **3 essential features** needed on campus:
+
+1. **Peer-to-Peer Key Transfer (Borrow & Return):**
+   * Students or faculty can open the web app on their phone to borrow, return, or transfer keys between peers.
+   * **2-Factor Authorization:** An authorized custody transfer requires:
+     * **Step 1:** Scanning / tapping the physical key's **NFC Card**.
+     * **Step 2:** Scanning the recipient's **Personal QR Code** containing their identity and clearance.
+   * Also includes a "My Personal Identity QR" screen so students/faculty can have their own QR code scanned by another peer.
+2. **Facility Problem & Incident Reporting:**
+   * Students or faculty can report issues encountered in academic rooms or workshops (e.g., equipment damage, electrical hazards, AC leaks, missing tools).
+   * Users write a detailed problem description and **upload a photo** directly (via camera or photo file picker) with instant preview.
+   * Immediately dispatches to the Admin Desk with timestamp, reporter credentials, and image evidence.
+3. **Current Rooms Dashboard:**
+   * A clean, uncluttered, focused view showing **ONLY**:
+     * What rooms are occupied vs available.
+     * What class and faculty is currently occupying the facility.
+
+---
+
+## 🖥️ 2. Admin Web Portal (Web PC)
+
+Designed for program heads, department chairs, the dean, and administrative secretaries:
+
+1. **Manual Schedule Creation with Constraint Enforcement:**
+   * *Not automated generation:* Manually input by administrators based on:
+     * CIT Rooms & Laboratories
+     * Faculty Workloads
+     * Course Curriculum Subjects
+     * Room Capacity / Section Size
+   * **Real-Time Constraint Checking:** Cross-references database constraints to actively prevent:
+     * Room double-bookings / overlapping times.
+     * Faculty assignment clashes.
+     * Student cohort / section clashes.
+     * Room capacity deficiencies.
+2. **Automated Spreadsheet Output Module:**
+   * Replaces manual spreadsheet plotting in third-party software like Microsoft Excel.
+   * The system automatically generates a formatted, institutional semester timetable spreadsheet based on the manually entered schedules.
+   * **1-Click Download Spreadsheet (.CSV / Excel):** Exports an instant `.csv` file compatible with Microsoft Excel and Google Sheets.
+   * **1-Click Print Spreadsheet Matrix:** Clean official print layout.
+3. **Peer-to-Peer Key Transfer Audit Ledger:**
+   * Immutable record of all peer-to-peer key handovers, showing timestamp, room, from/to user, verified NFC UID, and verified Personal QR token.
+4. **Facility Problem Reports Desk:**
+   * Review all problem reports submitted from mobile devices.
+   * View full-resolution uploaded photo evidence and manage resolution statuses (*Under Review*, *In Progress*, *Resolved*).
+5. **Real-Time Facility Utilization Status:**
+   * Complete overview of campus facilities and live class occupancy.
 
 ---
 
@@ -72,90 +73,28 @@ RUPAMS bridges institutional facility scheduling and physical key security by se
 ```
 RUPAMS/
 ├── index.html              # Main single-page application entry point
+├── README.md               # Complete thesis documentation & testing guide
+├── .gitignore              # Git ignore rules
 ├── css/
-│   ├── main.css            # Base design system, URS color palette, typography, modals
-│   ├── admin.css           # Admin dashboard, weekly matrix grid, cabinet visualizer
-│   └── mobile.css          # Mobile web app interface, phone frame bezel, digital pass
-├── js/
-│   ├── app.js              # Application controller, view routing, role switching
-│   ├── state.js            # Reactive state management with LocalStorage persistence
-│   ├── mockData.js         # Initial URS Morong CIT baseline data (rooms, keys, schedules)
-│   ├── scheduler.js        # Automated timetable generation engine & conflict detector
-│   ├── keyManagement.js    # Key borrowing, return, overdue background monitor, forensic tracer
-│   ├── audio.js            # Web Audio API sound synthesizer
-│   └── qrNfcSim.js         # Multi-modal NFC tap simulator and camera QR scanner
-└── README.md               # System documentation & usage guide
+│   ├── main.css            # Minimalist 3-color base tokens, layout, modals, toast
+│   ├── admin.css           # Admin scheduling panel, spreadsheet output, reports desk
+│   └── mobile.css          # Mobile 3-feature workflow, P2P card, photo upload
+└── js/
+    ├── app.js              # Application controller & view orchestrator
+    ├── state.js            # Reactive state management with LocalStorage persistence
+    ├── mockData.js         # Initial URS Morong CIT baseline data (rooms, keys, schedules)
+    ├── scheduler.js        # Manual schedule validator & constraint enforcement
+    ├── keyManagement.js    # Peer-to-Peer NFC + QR key custody processor
+    ├── qrNfcSim.js         # Vector SVG personal QR code generator & camera scanner
+    └── audio.js            # Web Audio API sound synthesizer
 ```
 
 ---
 
-## 🏁 Getting Started
+## 🚀 How to Run
 
-### Prerequisites
-
-You only need a modern web browser:
-* Google Chrome (recommended for Web NFC & BarcodeDetector support)
-* Mozilla Firefox
-* Microsoft Edge
-* Apple Safari
-
-### Running the System
-
-1. **Option A: Direct Browser Launch (Zero Install)**
-   * Simply double-click `index.html` or drag it into any web browser.
-
-2. **Option B: Local HTTP Server (Optional)**
-   Using Python:
-   ```bash
-   python -m http.server 8000
-   ```
-   Or using Node.js:
-   ```bash
-   npx serve .
-   ```
-   Open `http://localhost:8000` in your web browser.
-
----
-
-## 🧪 Demonstration & Testing Guide
-
-1. **Switching Between Admin Portal and Mobile Web App:**
-   * Use the `🖥️ Admin Portal` and `📱 Mobile App` pill buttons in the top header.
-   * When in Mobile App mode, click `📱 Device Bezel` to toggle between realistic smartphone frame and full responsive view.
-
-2. **Testing Role Switching (Personas):**
-   * Click the user profile badge in the top right corner:
-     * **Dr. Liezel Fernando (Admin):** Full scheduling, review, and cabinet access.
-     * **Engr. Maria Elena Bautista (Faculty):** Electronics Dept. Chair view.
-     * **Juan Dela Cruz (Student):** 3rd Year BSIT Electronics student with active key pass.
-
-3. **Testing Automated Timetable Generation:**
-   * Go to **Timetable Generator** in the Admin sidebar.
-   * Click **⚡ Generate Optimized Timetable** to run the constraint-satisfaction engine and observe the 0% conflict rate.
-
-4. **Testing Real-Time Conflict Detection:**
-   * Go to **Conflict Detection** in the Admin sidebar.
-   * Click the preset buttons:
-     * *Test Preset: Room Double-Booking* (Instantly flags facility collisions in red).
-     * *Test Preset: Faculty Overlap* (Flags instructor double-booking).
-
-5. **Testing NFC & QR Key Handovers:**
-   * Click **📡 NFC Key Tap Simulator** from any screen to simulate tapping physical keys (`KEY-CIT-101`, `KEY-CIT-AUTO`, `KEY-CIT-ELX`).
-   * Listen to the Web Audio digital chimes and watch the cabinet hook lights update in real time.
-
-6. **Testing Automated Overdue Key Tracking:**
-   * Notice the overdue key `KEY-CIT-AUTO` pre-loaded in the system.
-   * The background monitor flags the overdue status, triggers the top red alarm badge, and flashes the countdown timer.
-
-7. **Testing Rapid Incident Tracing:**
-   * Go to **Incident Tracing** in the Admin sidebar.
-   * Select a room (e.g. `CIT-AUTO` or `CIT-ELX`) and click **Execute Forensic Search** to extract historical key holders and custody windows.
-
----
-
-## 📜 Thesis Attribution
-
-* **Project:** Room Utilization and Physical Access Management System (RUPAMS)
-* **Institution:** University of Rizal System Morong Campus
-* **College:** College of Industrial Technology (CIT)
-* **Year:** Academic Year 2026-2027
+1. **Direct Browser Launch (Zero Install):**
+   * Double-click [index.html](file:///c:/Users/efren%20L%20Cenir/OneDrive/Desktop/RUPAMS/index.html) to open in Chrome, Edge, or Firefox.
+2. **Switching Views & Personas:**
+   * Top bar toggle: Switch between `Admin Portal (PC)` and `Mobile Web App`.
+   * Click the user name in the top right corner to switch between **Dr. Liezel Fernando (Admin)**, **Engr. Maria Elena Bautista (Faculty)**, and **Juan Dela Cruz (Student)**.

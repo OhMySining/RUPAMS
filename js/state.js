@@ -1,16 +1,15 @@
 /**
  * RUPAMS - Central State Management & Reactive Store
- * Uses LocalStorage for client-side persistence and dispatches events on state changes.
+ * Persistent storage with LocalStorage & event bus
  */
 
-const STORAGE_KEY = 'RUPAMS_DATABASE_v1.0';
+const STORAGE_KEY = 'RUPAMS_DATABASE_v2.0';
 
 class AppState {
   constructor() {
     this.listeners = {};
-    this.currentUser = null;
     this.viewMode = 'admin'; // 'admin' | 'mobile'
-    this.mobileViewFrame = false; // whether to frame mobile as a smartphone container or responsive
+    this.mobileViewFrame = false;
     this.data = this.loadState();
     this.currentUser = this.data.demoUsers.admin;
   }
@@ -20,15 +19,13 @@ class AppState {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Ensure all required keys exist
-        if (parsed.rooms && parsed.keys && parsed.schedules && parsed.requests) {
+        if (parsed.rooms && parsed.schedules && parsed.reports && parsed.transfers) {
           return parsed;
         }
       }
     } catch (err) {
       console.warn('Could not parse stored state, using defaults:', err);
     }
-    // Default clone
     const initial = JSON.parse(JSON.stringify(window.INITIAL_MOCK_DATA));
     this.persist(initial);
     return initial;
@@ -51,34 +48,6 @@ class AppState {
     this.data = JSON.parse(JSON.stringify(window.INITIAL_MOCK_DATA));
     this.save();
     this.emit('databaseReset', this.data);
-  }
-
-  exportData() {
-    const jsonStr = JSON.stringify(this.data, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `RUPAMS_Backup_CIT_URS_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  importData(jsonString) {
-    try {
-      const parsed = JSON.parse(jsonString);
-      if (!parsed.rooms || !parsed.keys || !parsed.schedules) {
-        throw new Error('Invalid RUPAMS database schema: Missing essential tables.');
-      }
-      this.data = parsed;
-      this.save();
-      this.emit('dataImported', this.data);
-      return { success: true };
-    } catch (e) {
-      return { success: false, error: e.message };
-    }
   }
 
   // Pub-sub
@@ -104,7 +73,6 @@ class AppState {
     }
   }
 
-  // Switch current user profile
   setUser(roleKey) {
     if (this.data.demoUsers && this.data.demoUsers[roleKey]) {
       this.currentUser = this.data.demoUsers[roleKey];
@@ -122,7 +90,6 @@ class AppState {
     this.emit('mobileFrameChanged', framed);
   }
 
-  // Helper getters
   getRoom(code) {
     return this.data.rooms.find(r => r.code === code);
   }
@@ -131,21 +98,120 @@ class AppState {
     return this.data.keys.find(k => k.keyId === keyId || k.roomCode === keyId);
   }
 
-  getFaculty(facId) {
-    return this.data.faculty.find(f => f.id === facId);
+  // Schedule creation and removal
+  addSchedule(scheduleItem) {
+    this.data.schedules.push(scheduleItem);
+    this.save();
+    this.emit('scheduleAdded', scheduleItem);
   }
 
-  // Immutable audit log append
-  addAuditLog(entry) {
-    const newLog = {
-      logId: 'LOG-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(Math.random() * 899 + 100),
-      timestamp: new Date().toISOString(),
-      ...entry
-    };
-    this.data.auditLogs.unshift(newLog); // prepend to top
+  deleteSchedule(scheduleId) {
+    this.data.schedules = this.data.schedules.filter(s => s.id !== scheduleId);
     this.save();
-    this.emit('auditLogAdded', newLog);
-    return newLog;
+    this.emit('scheduleDeleted', scheduleId);
+  }
+
+  // Peer-to-Peer key transfer log
+  addTransfer(transferRecord) {
+    const record = {
+      transferId: "TRF-" + Date.now().toString(36).toUpperCase(),
+      timestamp: new Date().toISOString(),
+      ...transferRecord
+    };
+    this.data.transfers.unshift(record);
+
+    // Update key custody
+    const key = this.getKey(transferRecord.keyId || transferRecord.roomCode);
+    if (key) {
+      key.currentHolder = transferRecord.toUser;
+      key.status = transferRecord.toUser.includes("Cabinet") ? "in_cabinet" : "held";
+    }
+
+    // Update room occupancy state
+    const room = this.getRoom(transferRecord.roomCode);
+    if (room) {
+      if (transferRecord.actionType === 'RETURN_TO_CABINET') {
+        room.status = 'available';
+        room.occupancy = null;
+      } else {
+        room.status = 'occupied';
+        room.occupancy = {
+          class: transferRecord.purpose || "Laboratory Activity",
+          faculty: transferRecord.toUser,
+          section: "Custody Released",
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+      }
+    }
+
+    this.save();
+    this.emit('transferAdded', record);
+    return record;
+  }
+
+  // Problem report submission
+  addProblemReport(reportData) {
+    const newReport = {
+      reportId: "REP-" + Date.now().toString().slice(-6),
+      timestamp: new Date().toISOString(),
+      status: "Under Review",
+      ...reportData
+    };
+    this.data.reports.unshift(newReport);
+    this.save();
+    this.emit('reportAdded', newReport);
+    return newReport;
+  }
+
+  updateReportStatus(reportId, newStatus) {
+    const report = this.data.reports.find(r => r.reportId === reportId);
+    if (report) {
+      report.status = newStatus;
+      this.save();
+      this.emit('reportUpdated', report);
+    }
+  }
+
+  /**
+   * Automated Spreadsheet Export (CSV / Excel format)
+   * Converts the manually input schedules into an instant downloadable spreadsheet.
+   */
+  exportSpreadsheetCSV() {
+    const schedules = this.data.schedules;
+    const institution = this.data.institution;
+
+    let csvContent = `\uFEFF${institution.university} - ${institution.campus}\n`;
+    csvContent += `${institution.college}\n`;
+    csvContent += `OFFICIAL SEMESTRAL TIMETABLE SPREADSHEET (${institution.semester} AY ${institution.academicYear})\n\n`;
+    
+    // Headers
+    csvContent += "Schedule ID,Course Code,Descriptive Title,Faculty / Instructor,Day,Start Time,End Time,Assigned Room,Section,Enrolled Count\n";
+
+    schedules.forEach(s => {
+      const row = [
+        s.id,
+        `"${s.courseCode}"`,
+        `"${s.courseTitle}"`,
+        `"${s.facultyName}"`,
+        s.day,
+        s.startTime,
+        s.endTime,
+        s.roomCode,
+        `"${s.section}"`,
+        s.enrolled || 30
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `CIT_Timetable_Spreadsheet_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 }
 
