@@ -1,5 +1,5 @@
 /**
- * RUPAMS - Initial Seed Data (Minimalist Light Palette Edition)
+ * RUPAMS - Initial Seed Data (Minimalist Light Edition)
  * University of Rizal System Morong Campus
  * College of Industrial Technology (CIT)
  */
@@ -15,6 +15,29 @@ const INITIAL_MOCK_DATA = {
     fullTitle: "Room Utilization & Physical Access Management System"
   },
 
+  programs: [
+    "BSIT - Automotive Technology",
+    "BSIT - Electrical Technology",
+    "BSIT - Electronics Technology",
+    "BSIT - Computer Technology",
+    "BSIT - Mechanical Technology",
+    "BSIT - Drafting Technology",
+    "BSIT - Food Service Management"
+  ],
+
+  yearLevels: [
+    "1st Year",
+    "2nd Year",
+    "3rd Year",
+    "4th Year"
+  ],
+
+  sections: [
+    "Section A",
+    "Section B",
+    "Section C"
+  ],
+
   rooms: [
     {
       code: "CIT-101",
@@ -24,6 +47,8 @@ const INITIAL_MOCK_DATA = {
       type: "Lecture",
       keyId: "KEY-CIT-101",
       status: "available", // available | occupied
+      keyStatus: "In Cabinet", // "In Cabinet" | "Borrowed"
+      keyHolder: "In Cabinet (Dean's Office)",
       occupancy: null
     },
     {
@@ -34,6 +59,8 @@ const INITIAL_MOCK_DATA = {
       type: "Lecture",
       keyId: "KEY-CIT-102",
       status: "available",
+      keyStatus: "In Cabinet",
+      keyHolder: "In Cabinet (Dean's Office)",
       occupancy: null
     },
     {
@@ -44,6 +71,8 @@ const INITIAL_MOCK_DATA = {
       type: "Lecture",
       keyId: "KEY-CIT-103",
       status: "available",
+      keyStatus: "In Cabinet",
+      keyHolder: "In Cabinet (Dean's Office)",
       occupancy: null
     },
     {
@@ -54,9 +83,11 @@ const INITIAL_MOCK_DATA = {
       type: "Computer Lab",
       keyId: "KEY-CIT-CL1",
       status: "occupied",
+      keyStatus: "Borrowed",
+      keyHolder: "Prof. Liezel Fernando (Faculty)",
       occupancy: {
         class: "COMP 202 - Database Systems",
-        section: "BSIT-COMP-2A",
+        section: "BSIT-COMP 2A",
         faculty: "Prof. Liezel Fernando",
         time: "08:00 - 11:00"
       }
@@ -69,6 +100,8 @@ const INITIAL_MOCK_DATA = {
       type: "Computer Lab",
       keyId: "KEY-CIT-CL2",
       status: "available",
+      keyStatus: "In Cabinet",
+      keyHolder: "In Cabinet (Dean's Office)",
       occupancy: null
     },
     {
@@ -79,9 +112,11 @@ const INITIAL_MOCK_DATA = {
       type: "Electronics Lab",
       keyId: "KEY-CIT-ELX",
       status: "occupied",
+      keyStatus: "Borrowed",
+      keyHolder: "Juan Dela Cruz (Student)",
       occupancy: {
         class: "ELX 315 - Robotics Capstone",
-        section: "BSIT-ELX-3A",
+        section: "BSIT-ELX 3A",
         faculty: "Engr. Maria Elena Bautista",
         time: "09:30 - 12:30"
       }
@@ -94,6 +129,8 @@ const INITIAL_MOCK_DATA = {
       type: "Electrical Workshop",
       keyId: "KEY-CIT-ELEC",
       status: "available",
+      keyStatus: "In Cabinet",
+      keyHolder: "In Cabinet (Dean's Office)",
       occupancy: null
     },
     {
@@ -104,9 +141,11 @@ const INITIAL_MOCK_DATA = {
       type: "Automotive Shop",
       keyId: "KEY-CIT-AUTO",
       status: "occupied",
+      keyStatus: "Borrowed",
+      keyHolder: "Mark Jayson Rivera (Student)",
       occupancy: {
         class: "AUTO 211 - Engine Management",
-        section: "BSIT-AUTO-2A",
+        section: "BSIT-AUTO 2A",
         faculty: "Prof. Roberto Santos",
         time: "07:30 - 10:30"
       }
@@ -119,6 +158,8 @@ const INITIAL_MOCK_DATA = {
       type: "Mechanical Shop",
       keyId: "KEY-CIT-MECH",
       status: "available",
+      keyStatus: "In Cabinet",
+      keyHolder: "In Cabinet (Dean's Office)",
       occupancy: null
     },
     {
@@ -129,6 +170,8 @@ const INITIAL_MOCK_DATA = {
       type: "Food Tech",
       keyId: "KEY-CIT-FSM",
       status: "available",
+      keyStatus: "In Cabinet",
+      keyHolder: "In Cabinet (Dean's Office)",
       occupancy: null
     }
   ],
@@ -155,19 +198,19 @@ const INITIAL_MOCK_DATA = {
   ],
 
   keys: [
-    { keyId: "KEY-CIT-101", roomCode: "CIT-101", nfcUid: "04:B2:77:A1:9F:80", currentHolder: "In Cabinet", status: "in_cabinet" },
-    { keyId: "KEY-CIT-102", roomCode: "CIT-102", nfcUid: "04:C3:88:B2:AE:81", currentHolder: "In Cabinet", status: "in_cabinet" },
-    { keyId: "KEY-CIT-103", roomCode: "CIT-103", nfcUid: "04:D4:99:C3:BD:82", currentHolder: "In Cabinet", status: "in_cabinet" },
-    { keyId: "KEY-CIT-CL1", roomCode: "CIT-CL1", nfcUid: "04:E5:AA:D4:CE:83", currentHolder: "Prof. Liezel Fernando (Faculty)", status: "held" },
-    { keyId: "KEY-CIT-CL2", roomCode: "CIT-CL2", nfcUid: "04:F6:BB:E5:DF:84", currentHolder: "In Cabinet", status: "in_cabinet" },
-    { keyId: "KEY-CIT-ELX", roomCode: "CIT-ELX", nfcUid: "04:17:CC:F6:E0:85", currentHolder: "Juan Dela Cruz (Student)", status: "held" },
-    { keyId: "KEY-CIT-ELEC", roomCode: "CIT-ELEC", nfcUid: "04:28:DD:07:F1:86", currentHolder: "In Cabinet", status: "in_cabinet" },
-    { keyId: "KEY-CIT-AUTO", roomCode: "CIT-AUTO", nfcUid: "04:39:EE:18:02:87", currentHolder: "Mark Jayson Rivera (Student)", status: "held" },
-    { keyId: "KEY-CIT-MECH", roomCode: "CIT-MECH", nfcUid: "04:4A:FF:29:13:88", currentHolder: "In Cabinet", status: "in_cabinet" },
-    { keyId: "KEY-CIT-FSM", roomCode: "CIT-FSM", nfcUid: "04:5B:00:3A:24:89", currentHolder: "In Cabinet", status: "in_cabinet" }
+    { keyId: "KEY-CIT-101", roomCode: "CIT-101", nfcUid: "04:B2:77:A1:9F:80", currentHolder: "In Cabinet (Dean's Office)", status: "In Cabinet" },
+    { keyId: "KEY-CIT-102", roomCode: "CIT-102", nfcUid: "04:C3:88:B2:AE:81", currentHolder: "In Cabinet (Dean's Office)", status: "In Cabinet" },
+    { keyId: "KEY-CIT-103", roomCode: "CIT-103", nfcUid: "04:D4:99:C3:BD:82", currentHolder: "In Cabinet (Dean's Office)", status: "In Cabinet" },
+    { keyId: "KEY-CIT-CL1", roomCode: "CIT-CL1", nfcUid: "04:E5:AA:D4:CE:83", currentHolder: "Prof. Liezel Fernando (Faculty)", status: "Borrowed" },
+    { keyId: "KEY-CIT-CL2", roomCode: "CIT-CL2", nfcUid: "04:F6:BB:E5:DF:84", currentHolder: "In Cabinet (Dean's Office)", status: "In Cabinet" },
+    { keyId: "KEY-CIT-ELX", roomCode: "CIT-ELX", nfcUid: "04:17:CC:F6:E0:85", currentHolder: "Juan Dela Cruz (Student)", status: "Borrowed" },
+    { keyId: "KEY-CIT-ELEC", roomCode: "CIT-ELEC", nfcUid: "04:28:DD:07:F1:86", currentHolder: "In Cabinet (Dean's Office)", status: "In Cabinet" },
+    { keyId: "KEY-CIT-AUTO", roomCode: "CIT-AUTO", nfcUid: "04:39:EE:18:02:87", currentHolder: "Mark Jayson Rivera (Student)", status: "Borrowed" },
+    { keyId: "KEY-CIT-MECH", roomCode: "CIT-MECH", nfcUid: "04:4A:FF:29:13:88", currentHolder: "In Cabinet (Dean's Office)", status: "In Cabinet" },
+    { keyId: "KEY-CIT-FSM", roomCode: "CIT-FSM", nfcUid: "04:5B:00:3A:24:89", currentHolder: "In Cabinet (Dean's Office)", status: "In Cabinet" }
   ],
 
-  // Manually entered official schedule records
+  // Manually entered official schedule records with Program, Year, and Section
   schedules: [
     {
       id: "SCH-001",
@@ -179,7 +222,9 @@ const INITIAL_MOCK_DATA = {
       day: "Monday",
       startTime: "08:00",
       endTime: "11:00",
-      section: "BSIT-COMP-2A",
+      program: "BSIT - Computer Technology",
+      year: "2nd Year",
+      section: "Section A",
       enrolled: 30
     },
     {
@@ -192,7 +237,9 @@ const INITIAL_MOCK_DATA = {
       day: "Monday",
       startTime: "13:00",
       endTime: "16:00",
-      section: "BSIT-ELX-3A",
+      program: "BSIT - Electronics Technology",
+      year: "3rd Year",
+      section: "Section A",
       enrolled: 28
     },
     {
@@ -205,7 +252,9 @@ const INITIAL_MOCK_DATA = {
       day: "Tuesday",
       startTime: "07:30",
       endTime: "10:30",
-      section: "BSIT-AUTO-2A",
+      program: "BSIT - Automotive Technology",
+      year: "2nd Year",
+      section: "Section A",
       enrolled: 24
     },
     {
@@ -218,7 +267,9 @@ const INITIAL_MOCK_DATA = {
       day: "Tuesday",
       startTime: "13:00",
       endTime: "16:00",
-      section: "BSIT-ELEC-1B",
+      program: "BSIT - Electrical Technology",
+      year: "1st Year",
+      section: "Section B",
       enrolled: 26
     },
     {
@@ -231,7 +282,9 @@ const INITIAL_MOCK_DATA = {
       day: "Wednesday",
       startTime: "08:00",
       endTime: "11:00",
-      section: "BSIT-DRAFT-1A",
+      program: "BSIT - Drafting Technology",
+      year: "1st Year",
+      section: "Section A",
       enrolled: 30
     },
     {
@@ -244,7 +297,9 @@ const INITIAL_MOCK_DATA = {
       day: "Thursday",
       startTime: "13:00",
       endTime: "16:00",
-      section: "BSIT-MECH-2B",
+      program: "BSIT - Mechanical Technology",
+      year: "2nd Year",
+      section: "Section B",
       enrolled: 22
     },
     {
@@ -257,15 +312,17 @@ const INITIAL_MOCK_DATA = {
       day: "Friday",
       startTime: "08:00",
       endTime: "11:00",
-      section: "BSIT-FSM-1A",
+      program: "BSIT - Food Service Management",
+      year: "1st Year",
+      section: "Section A",
       enrolled: 28
     }
   ],
 
-  // Peer-to-Peer Key Transfer Records
-  transfers: [
+  // Key Logs with exact Action Types: "Borrowed", "Returned", "Transfered"
+  keyLogs: [
     {
-      transferId: "TRF-2026-001",
+      logId: "LOG-2026-001",
       timestamp: new Date(Date.now() - 75 * 60 * 1000).toISOString(),
       roomCode: "CIT-ELX",
       keyId: "KEY-CIT-ELX",
@@ -273,20 +330,35 @@ const INITIAL_MOCK_DATA = {
       toUser: "Juan Dela Cruz (Student)",
       nfcUidVerified: "04:17:CC:F6:E0:85",
       qrTokenVerified: "QR-STU-2024-0012-JUAN",
-      actionType: "BORROW_TRANSFER",
+      actionType: "Transfered",
+      loggedLocation: "Dean's Office Counter",
       purpose: "Robotics Laboratory Circuit Fabrication"
     },
     {
-      transferId: "TRF-2026-002",
+      logId: "LOG-2026-002",
       timestamp: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
       roomCode: "CIT-CL1",
       keyId: "KEY-CIT-CL1",
-      fromUser: "Key Cabinet (Slot #04)",
+      fromUser: "Dean's Office Cabinet (Slot #04)",
       toUser: "Prof. Liezel Fernando (Faculty)",
       nfcUidVerified: "04:E5:AA:D4:CE:83",
       qrTokenVerified: "QR-FAC-004-FERNANDO",
-      actionType: "CABINET_CHECKOUT",
+      actionType: "Borrowed",
+      loggedLocation: "Dean's Office Counter",
       purpose: "COMP 202 Official Class Session"
+    },
+    {
+      logId: "LOG-2026-003",
+      timestamp: new Date(Date.now() - 240 * 60 * 1000).toISOString(),
+      roomCode: "CIT-101",
+      keyId: "KEY-CIT-101",
+      fromUser: "Engr. Danilo Reyes (Faculty)",
+      toUser: "Dean's Office Cabinet (Slot #01)",
+      nfcUidVerified: "04:B2:77:A1:9F:80",
+      qrTokenVerified: "QR-FAC-005-REYES",
+      actionType: "Returned",
+      loggedLocation: "Dean's Office Counter",
+      purpose: "Session ended, key safely surrendered"
     }
   ],
 
@@ -301,8 +373,8 @@ const INITIAL_MOCK_DATA = {
       reporterId: "2024-0012-MR",
       category: "Equipment Malfunction",
       description: "Digital Oscilloscope Bench #4 power supply is tripping the circuit breaker whenever channel 2 is probed.",
-      photoBase64: null, // sample preview will be handled
-      status: "Under Review" // Under Review | In Progress | Resolved
+      photoBase64: null,
+      status: "Under Review"
     },
     {
       reportId: "REP-2026-098",
@@ -318,7 +390,6 @@ const INITIAL_MOCK_DATA = {
     }
   ],
 
-  // Standard demo users for testing
   demoUsers: {
     admin: {
       id: "ADM-001",

@@ -63,8 +63,11 @@ const SchedulerEngine = {
         }
 
         // Section Overlap
-        if (candidate.section && item.section && candidate.section.trim().toLowerCase() === item.section.trim().toLowerCase()) {
-          errors.push(`Student Section Clash: Cohort "${candidate.section}" is already scheduled in room ${item.roomCode} for "${item.courseCode}" during this time.`);
+        const candidateCohort = `${candidate.program || ''} - ${candidate.year || ''} - ${candidate.section || ''}`.toLowerCase();
+        const itemCohort = `${item.program || ''} - ${item.year || ''} - ${item.section || ''}`.toLowerCase();
+
+        if (candidateCohort && itemCohort && candidateCohort === itemCohort) {
+          errors.push(`Student Section Clash: Cohort "${candidate.program} (${candidate.year} - ${candidate.section})" is already scheduled in room ${item.roomCode} for "${item.courseCode}" from ${item.startTime} to ${item.endTime}.`);
         }
       }
     }

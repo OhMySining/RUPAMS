@@ -3,7 +3,7 @@
  * Persistent storage with LocalStorage & event bus
  */
 
-const STORAGE_KEY = 'RUPAMS_DATABASE_v2.0';
+const STORAGE_KEY = 'RUPAMS_DATABASE_v3.0';
 
 class AppState {
   constructor() {
@@ -19,7 +19,8 @@ class AppState {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.rooms && parsed.schedules && parsed.reports && parsed.transfers) {
+        if (parsed.rooms && parsed.schedules && parsed.reports && (parsed.keyLogs || parsed.transfers)) {
+          if (!parsed.keyLogs) parsed.keyLogs = parsed.transfers || [];
           return parsed;
         }
       }
@@ -111,42 +112,70 @@ class AppState {
     this.emit('scheduleDeleted', scheduleId);
   }
 
-  // Peer-to-Peer key transfer log
-  addTransfer(transferRecord) {
+  /**
+   * Log Key Transaction (Borrowed, Returned, Transfered)
+   * Can be initiated either from Mobile or at the Dean's Office Web Counter.
+   */
+  addKeyLog(logEntry) {
     const record = {
-      transferId: "TRF-" + Date.now().toString(36).toUpperCase(),
+      logId: "LOG-" + Date.now().toString().slice(-6),
       timestamp: new Date().toISOString(),
-      ...transferRecord
+      actionType: logEntry.actionType, // "Borrowed" | "Returned" | "Transfered"
+      roomCode: logEntry.roomCode,
+      keyId: logEntry.keyId,
+      fromUser: logEntry.fromUser || "In Cabinet",
+      toUser: logEntry.toUser,
+      nfcUidVerified: logEntry.nfcUidVerified,
+      qrTokenVerified: logEntry.qrTokenVerified,
+      purpose: logEntry.purpose || "Academic / Laboratory Access",
+      loggedLocation: logEntry.loggedLocation || "Dean's Office Counter"
     };
-    this.data.transfers.unshift(record);
 
-    // Update key custody
-    const key = this.getKey(transferRecord.keyId || transferRecord.roomCode);
-    if (key) {
-      key.currentHolder = transferRecord.toUser;
-      key.status = transferRecord.toUser.includes("Cabinet") ? "in_cabinet" : "held";
-    }
+    if (!this.data.keyLogs) this.data.keyLogs = [];
+    this.data.keyLogs.unshift(record);
 
-    // Update room occupancy state
-    const room = this.getRoom(transferRecord.roomCode);
-    if (room) {
-      if (transferRecord.actionType === 'RETURN_TO_CABINET') {
-        room.status = 'available';
+    // Update Key and Room custody state
+    const key = this.getKey(logEntry.keyId || logEntry.roomCode);
+    const room = this.getRoom(logEntry.roomCode);
+
+    if (logEntry.actionType === 'Returned') {
+      if (key) {
+        key.status = "In Cabinet";
+        key.currentHolder = "In Cabinet (Dean's Office)";
+      }
+      if (room) {
+        room.status = "available";
+        room.keyStatus = "In Cabinet";
+        room.keyHolder = "In Cabinet (Dean's Office)";
         room.occupancy = null;
-      } else {
-        room.status = 'occupied';
+      }
+    } else {
+      // Borrowed or Transfered
+      if (key) {
+        key.status = "Borrowed";
+        key.currentHolder = logEntry.toUser;
+      }
+      if (room) {
+        room.status = "occupied";
+        room.keyStatus = "Borrowed";
+        room.keyHolder = logEntry.toUser;
         room.occupancy = {
-          class: transferRecord.purpose || "Laboratory Activity",
-          faculty: transferRecord.toUser,
-          section: "Custody Released",
+          class: logEntry.purpose || "Laboratory Activity",
+          faculty: logEntry.toUser,
+          section: logEntry.actionType === 'Transfered' ? 'Transferred Key' : 'Official Borrow',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
       }
     }
 
     this.save();
-    this.emit('transferAdded', record);
+    this.emit('keyLogAdded', record);
     return record;
+  }
+
+  // Backwards compatibility alias
+  addTransfer(transferRecord) {
+    return this.addKeyLog(transferRecord);
   }
 
   // Problem report submission
@@ -174,7 +203,7 @@ class AppState {
 
   /**
    * Automated Spreadsheet Export (CSV / Excel format)
-   * Converts the manually input schedules into an instant downloadable spreadsheet.
+   * Includes Program, Year Level, and Section
    */
   exportSpreadsheetCSV() {
     const schedules = this.data.schedules;
@@ -183,13 +212,16 @@ class AppState {
     let csvContent = `\uFEFF${institution.university} - ${institution.campus}\n`;
     csvContent += `${institution.college}\n`;
     csvContent += `OFFICIAL SEMESTRAL TIMETABLE SPREADSHEET (${institution.semester} AY ${institution.academicYear})\n\n`;
-    
-    // Headers
-    csvContent += "Schedule ID,Course Code,Descriptive Title,Faculty / Instructor,Day,Start Time,End Time,Assigned Room,Section,Enrolled Count\n";
+
+    // Headers with Program, Year, Section
+    csvContent += "Schedule ID,Program,Year Level,Section,Course Code,Descriptive Title,Faculty / Instructor,Day,Start Time,End Time,Assigned Room,Enrolled Count\n";
 
     schedules.forEach(s => {
       const row = [
         s.id,
+        `"${s.program || 'BSIT'}"`,
+        `"${s.year || 'N/A'}"`,
+        `"${s.section || 'Section A'}"`,
         `"${s.courseCode}"`,
         `"${s.courseTitle}"`,
         `"${s.facultyName}"`,
@@ -197,7 +229,6 @@ class AppState {
         s.startTime,
         s.endTime,
         s.roomCode,
-        `"${s.section}"`,
         s.enrolled || 30
       ];
       csvContent += row.join(",") + "\n";

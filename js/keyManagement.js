@@ -1,35 +1,42 @@
 /**
- * RUPAMS - Peer-to-Peer Key Transfer & Multi-Modal Verification Controller
+ * RUPAMS - Key Transaction & Logging Controller
  * College of Industrial Technology (CIT) - URS Morong Campus
+ * Handles Borrowed, Returned, and Transfered events (Mobile or Dean's Office Counter)
  */
 
 const KeyManager = {
   /**
-   * Process Peer-to-Peer Transfer (Student to Student, Faculty to Student, or Return to Cabinet)
-   * Enforces 2-Factor Physical Access Validation:
+   * Process and log Key Transaction
+   * Action Types strictly: "Borrowed", "Returned", "Transfered"
+   * Requires:
    * 1. Physical Key NFC Card UID
    * 2. Personal Identity QR Code Token
    */
-  processP2PTransfer({ keyId, roomCode, nfcUid, qrToken, fromUser, toUser, actionType, purpose }) {
+  processKeyTransaction({ keyId, roomCode, nfcUid, qrToken, fromUser, toUser, actionType, purpose, loggedLocation }) {
     if (!nfcUid) {
-      return { success: false, error: "NFC Physical Key Card required for custody verification." };
+      return { success: false, error: "Physical Key NFC Card verification is required." };
     }
     if (!qrToken) {
-      return { success: false, error: "Personal QR Code identification required to authorize transfer." };
+      return { success: false, error: "Personal Identity QR Code is required to authorize transaction." };
     }
 
-    const transferRecord = {
+    // Default action type normalization
+    let validAction = actionType || "Borrowed";
+    if (validAction === 'BORROW_TRANSFER' || validAction === 'CABINET_CHECKOUT') validAction = "Borrowed";
+    if (validAction === 'RETURN_TO_CABINET') validAction = "Returned";
+    if (validAction === 'P2P_TRANSFER') validAction = "Transfered";
+
+    const savedRecord = window.appState.addKeyLog({
       roomCode: roomCode,
       keyId: keyId,
-      fromUser: fromUser || "Current Holder",
-      toUser: toUser || "Authorized Recipient",
+      fromUser: fromUser || (validAction === 'Borrowed' ? "In Cabinet (Dean's Office)" : "Current Holder"),
+      toUser: toUser || (validAction === 'Returned' ? "In Cabinet (Dean's Office)" : "Authorized Borrower"),
+      actionType: validAction, // "Borrowed" | "Returned" | "Transfered"
       nfcUidVerified: nfcUid,
       qrTokenVerified: qrToken,
-      actionType: actionType || "P2P_TRANSFER",
-      purpose: purpose || "Academic / Laboratory Access"
-    };
-
-    const savedRecord = window.appState.addTransfer(transferRecord);
+      purpose: purpose || "Academic / Laboratory Session",
+      loggedLocation: loggedLocation || "Dean's Office Counter"
+    });
 
     if (window.SoundManager) {
       window.SoundManager.playSuccess();
@@ -37,8 +44,13 @@ const KeyManager = {
 
     return {
       success: true,
-      transfer: savedRecord
+      log: savedRecord
     };
+  },
+
+  // Backward compatibility alias
+  processP2PTransfer(params) {
+    return this.processKeyTransaction(params);
   }
 };
 
