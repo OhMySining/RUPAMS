@@ -111,7 +111,7 @@ RUPAMS/
 ## 🚀 How to Run
 
 1. **Direct Browser Launch (Zero Install):**
-   * Double-click [index.html](file:///c:/Users/efren L Cenir/OneDrive/Desktop/RUPAMS/index.html) to open in Chrome, Edge, or Firefox.
+   * Double-click [index.html](file:///c:/*/OneDrive/Desktop/RUPAMS/index.html) to open in Chrome, Edge, or Firefox.
 2. **Switching Views & Personas:**
    * Top bar toggle: Switch between `Admin Portal (PC)` and `Mobile Web App`.
    * Click the user name in the top right to switch between **Dr. Liezel Fernando (Admin)**, **Engr. Maria Elena Bautista (Faculty)**, and **Juan Dela Cruz (Student)**.
