@@ -24,12 +24,13 @@ const appUi = {
   verifiedToUser: null,
   mobileSelectedAction: 'Borrowed', // "Borrowed" | "Returned" | "Transfered"
 
-  // Dean's Office Counter flow state
-  deansCounterAction: 'Borrowed',
-  deansSelectedKey: null,
-  deansNfcUid: null,
-  deansQrToken: null,
-  deansToUser: null,
+  // Admin Portal "Key Counter" Dedicated Tab flow state
+  adminCounterStep: 1,
+  adminCounterAction: 'Borrowed', // "Borrowed" | "Returned" | "Transfered"
+  adminCounterSelectedKey: null,
+  adminCounterNfcUid: null,
+  adminCounterQrToken: null,
+  adminCounterToUser: null,
 
   uploadedPhotoBase64: null,
 
@@ -56,11 +57,13 @@ const appUi = {
 
     if (btnAdminView) {
       btnAdminView.addEventListener('click', () => {
+        window.QRNfcSimulator.stopCamera();
         window.appState.setViewMode('admin');
       });
     }
     if (btnMobileView) {
       btnMobileView.addEventListener('click', () => {
+        window.QRNfcSimulator.stopCamera();
         window.appState.setViewMode('mobile');
       });
     }
@@ -101,6 +104,7 @@ const appUi = {
   },
 
   switchAdminTab(tabId) {
+    window.QRNfcSimulator.stopCamera();
     this.activeAdminTab = tabId;
     document.querySelectorAll('.sidebar-menu .nav-link').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
@@ -109,6 +113,7 @@ const appUi = {
   },
 
   switchMobileTab(tabId) {
+    window.QRNfcSimulator.stopCamera();
     this.activeMobileTab = tabId;
     document.querySelectorAll('.mobile-tabs-nav .m-tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
@@ -165,6 +170,10 @@ const appUi = {
       case 'spreadsheet':
         content.innerHTML = this.getAdminSpreadsheetHTML();
         break;
+      case 'keycounter':
+        content.innerHTML = this.getAdminKeyCounterHTML();
+        this.bindAdminKeyCounterEvents();
+        break;
       case 'keylogs':
         content.innerHTML = this.getAdminKeyLogsHTML();
         this.bindKeyLogsEvents();
@@ -193,11 +202,9 @@ const appUi = {
           <h2>Facility & Key Utilization Dashboard</h2>
           <p>Real-time room availability, active class occupancy, and physical key custody in Dean's Office.</p>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <button class="btn btn-primary btn-sm" onclick="appUi.openDeansCounterModal()">
-            🔑 Dean's Office Key Counter
-          </button>
-        </div>
+        <button class="btn btn-primary btn-sm" onclick="appUi.switchAdminTab('keycounter')">
+          📟 Open Key Counter Station
+        </button>
       </div>
 
       <div style="display: flex; gap: 14px; margin-bottom: 16px; font-size: 0.82rem; color: var(--c-secondary);">
@@ -224,7 +231,7 @@ const appUi = {
               </div>
               <div class="room-card-body">
                 <div>${r.name}</div>
-                <small style="color: var(--c-text-muted);">Cap: ${r.capacity} • ${r.type}</small>
+                <small style="color: var(--c-text-muted);">Cap: ${r.capacity} seats • ${r.type}</small>
               </div>
 
               <!-- Explicit Key Status Display -->
@@ -395,7 +402,7 @@ const appUi = {
                 <label>Year:</label>
                 <select id="filterYearSelect" class="form-control" style="font-size: 0.72rem; padding: 3px 6px;">
                   <option value="ALL">All Years</option>
-                  ${yearLevels.map(y => `<option value="${y}" ${this.schFilterYear === y ? 'selected' : ''}>${y}</option>`).join('')}
+                  ${yearLevels.map(y => `<option value="${y}">${y}</option>`).join('')}
                 </select>
               </div>
 
@@ -672,7 +679,298 @@ const appUi = {
   },
 
   /**
-   * 4. Admin: Key Logs (Renamed from P2P Key Transfers)
+   * 4. Admin Dedicated Tab: "Key Counter"
+   * Dedicated terminal station in the Dean's Office for Borrowing, Returning, and Transferring keys.
+   * Same 3-step process as the mobile app (Step 1 NFC Scanner -> Step 2 QR Scanner -> Step 3 Authorize).
+   */
+  getAdminKeyCounterHTML() {
+    const keys = window.appState.data.keys;
+
+    return `
+      <div class="content-title-bar">
+        <div>
+          <h2>Dean's Office Key Counter Station</h2>
+          <p>Official terminal station in Dean's office for authorized key borrowing, returns to cabinet, or custody transfers.</p>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="appUi.switchAdminTab('keylogs')">
+          View Key Logs Ledger
+        </button>
+      </div>
+
+      <div class="key-counter-panel">
+        <!-- Interactive Terminal Card -->
+        <div class="key-counter-card">
+          <!-- Step Indicator -->
+          <div class="step-indicator-box">
+            <span class="step-badge ${this.adminCounterStep >= 1 ? (this.adminCounterStep > 1 ? 'done' : 'active') : ''}">
+              1. Key NFC ${this.adminCounterStep > 1 ? '✓' : ''}
+            </span>
+            <span class="step-badge ${this.adminCounterStep >= 2 ? (this.adminCounterStep > 2 ? 'done' : 'active') : ''}">
+              2. Personal QR ${this.adminCounterStep > 2 ? '✓' : ''}
+            </span>
+            <span class="step-badge ${this.adminCounterStep === 3 ? 'active' : ''}">
+              3. Authorize
+            </span>
+          </div>
+
+          ${this.renderAdminKeyCounterBody()}
+        </div>
+
+        <!-- Cabinet Status Overview -->
+        <div class="panel-card">
+          <div class="panel-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Dean's Office Key Cabinet (Live Sensors)</span>
+            <span style="font-size: 0.72rem; color: var(--c-text-muted);">Click key to select for counter</span>
+          </div>
+
+          <div class="cabinet-status-grid">
+            ${keys.map(k => {
+              const inCab = k.status === 'In Cabinet';
+              return `
+                <div class="cabinet-slot-card ${inCab ? 'in-cabinet' : 'borrowed'}" 
+                     style="cursor: pointer;" 
+                     onclick="appUi.selectKeyForAdminCounter('${k.keyId}')"
+                     title="Click to load into Key Counter">
+                  <strong style="color: var(--c-primary);">${k.roomCode}</strong>
+                  <div style="font-size: 0.7rem; color: var(--c-text-muted);">${k.keyId}</div>
+                  <div style="margin-top: 4px;">
+                    <span class="badge-status ${inCab ? 'available' : 'occupied'}" style="font-size: 0.65rem;">
+                      ${k.status}
+                    </span>
+                  </div>
+                  <div style="font-size: 0.68rem; color: var(--c-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${k.currentHolder}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  selectKeyForAdminCounter(keyId) {
+    this.adminCounterSelectedKey = keyId;
+    this.adminCounterStep = 1;
+    this.renderAdminView();
+    const sel = document.getElementById('adminKeySelect');
+    if (sel) sel.value = keyId;
+  },
+
+  renderAdminKeyCounterBody() {
+    const keys = window.appState.data.keys;
+
+    if (this.adminCounterStep === 1) {
+      return `
+        <div class="p2p-verification-screen">
+          <div class="form-group" style="text-align: left; margin-bottom: 14px;">
+            <label class="form-label">Dean's Office Transaction Type:</label>
+            <select id="adminActionTypeSelect" class="form-control">
+              <option value="Borrowed" ${this.adminCounterAction === 'Borrowed' ? 'selected' : ''}>Borrowed (Release key from cabinet to student/faculty)</option>
+              <option value="Returned" ${this.adminCounterAction === 'Returned' ? 'selected' : ''}>Returned (Surrender key back to Dean's Office cabinet)</option>
+              <option value="Transfered" ${this.adminCounterAction === 'Transfered' ? 'selected' : ''}>Transfered (Custody transfer logged at Dean's office)</option>
+            </select>
+          </div>
+
+          <!-- Step 1: NFC Scanner Visual Box -->
+          <div class="nfc-scanner-box">
+            <div class="nfc-wave-container">
+              <div class="nfc-wave-circle"></div>
+              <div class="nfc-wave-circle"></div>
+              <div class="nfc-wave-circle"></div>
+              <div class="nfc-core-icon">📡</div>
+            </div>
+            <strong style="font-size: 0.9rem; color: var(--c-primary); display: block;">Step 1: Physical Key NFC Card Scanner</strong>
+            <p style="font-size: 0.75rem; color: var(--c-text-muted); margin: 6px 0 14px 0;">
+              Hold physical RFID/NFC key tag over USB NFC reader or select from cabinet below.
+            </p>
+
+            <div class="form-group" style="text-align: left;">
+              <label class="form-label">Key Tag Detected / Selected:</label>
+              <select id="adminKeySelect" class="form-control" style="font-size: 0.82rem;">
+                ${keys.map(k => `
+                  <option value="${k.keyId}" ${this.adminCounterSelectedKey === k.keyId ? 'selected' : ''}>
+                    ${k.roomCode} Key (${k.keyId}) - NFC UID: ${k.nfcUid} [${k.status}]
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+
+            <button class="btn btn-primary" id="btnAdminConfirmNfc" style="width: 100%;">
+              Tap & Verify Physical Key NFC Tag
+            </button>
+          </div>
+        </div>
+      `;
+    } else if (this.adminCounterStep === 2) {
+      return `
+        <div class="p2p-verification-screen">
+          <strong style="font-size: 0.9rem; color: var(--c-primary); display: block; margin-bottom: 4px;">
+            Step 2: Personnel Personal QR Scanner
+          </strong>
+          <p style="font-size: 0.74rem; color: var(--c-text-muted); margin-bottom: 12px;">
+            Key <strong>${this.adminCounterSelectedKey}</strong> verified via NFC. Now scan the student/faculty's personal QR code.
+          </p>
+
+          <!-- Camera Viewfinder -->
+          <div class="camera-scanner-viewport">
+            <video id="adminCameraVideo" autoplay playsinline muted></video>
+            <div class="camera-guide-box">
+              <div class="camera-laser-bar"></div>
+            </div>
+          </div>
+          <div id="adminCameraVideo_status" style="font-size: 0.72rem; color: var(--c-text-muted); margin-bottom: 12px;">
+            Active camera viewfinder: Align personnel QR badge in target box
+          </div>
+
+          <!-- Quick Simulation Personnel Selector -->
+          <div style="font-size: 0.76rem; text-align: left; background: var(--c-secondary-light); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--c-border); margin-bottom: 12px;">
+            <label class="form-label">Or Select Personnel to Simulate Scan:</label>
+            <select id="adminUserSelect" class="form-control" style="font-size: 0.8rem;">
+              <option value="Juan Dela Cruz (Student)|QR-STU-2024-0012-JUAN">Juan Dela Cruz (Student ID: 2024-0012-MR)</option>
+              <option value="Engr. Maria Elena Bautista (Faculty)|QR-FAC-001-BAUTISTA">Engr. Maria Elena Bautista (Faculty FAC-001)</option>
+              <option value="Prof. Roberto Santos (Faculty)|QR-FAC-002-SANTOS">Prof. Roberto Santos (Faculty FAC-002)</option>
+              <option value="Prof. Liezel Fernando (Faculty)|QR-FAC-004-FERNANDO">Prof. Liezel Fernando (Faculty FAC-004)</option>
+              <option value="In Cabinet (Dean's Office)|QR-CABINET-DEAN">In Cabinet (Dean's Office)</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-outline" id="btnAdminBackToNfc" style="flex: 1;">Back</button>
+            <button class="btn btn-primary" id="btnAdminConfirmQr" style="flex: 2;">Verify Personal QR</button>
+          </div>
+        </div>
+      `;
+    } else {
+      // Step 3
+      return `
+        <div class="p2p-verification-screen" style="text-align: left;">
+          <strong style="font-size: 0.9rem; color: var(--c-primary); display: block; margin-bottom: 8px;">
+            Step 3: Authorize Dean's Office Key Transaction
+          </strong>
+
+          <div style="background: var(--c-secondary-light); border: 1px solid var(--c-border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px; font-size: 0.8rem;">
+            <div>Transaction Type: <strong>${this.adminCounterAction}</strong></div>
+            <div>Key ID: <strong>${this.adminCounterSelectedKey}</strong></div>
+            <div>Verified NFC Tag: <code>${this.adminCounterNfcUid}</code></div>
+            <div>Authorized Person: <strong>${this.adminCounterToUser}</strong></div>
+            <div>Verified QR Token: <code>${this.adminCounterQrToken}</code></div>
+            <div>Logging Terminal: <strong>Dean's Office Counter (Web Portal)</strong></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Purpose / Class / Operational Session:</label>
+            <input type="text" id="adminCounterPurpose" class="form-control" value="Official CIT Academic Session" placeholder="e.g. Lab Make-up Class, Thesis Assembly">
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-outline" id="btnAdminCancelCounter" style="flex: 1;">Cancel</button>
+            <button class="btn btn-primary" id="btnAdminExecuteCounter" style="flex: 2;">
+              Complete & Log ${this.adminCounterAction}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+  },
+
+  bindAdminKeyCounterEvents() {
+    const actionSelect = document.getElementById('adminActionTypeSelect');
+    if (actionSelect) {
+      actionSelect.addEventListener('change', (e) => {
+        this.adminCounterAction = e.target.value;
+      });
+    }
+
+    const btnConfirmNfc = document.getElementById('btnAdminConfirmNfc');
+    if (btnConfirmNfc) {
+      btnConfirmNfc.addEventListener('click', () => {
+        const keyId = document.getElementById('adminKeySelect').value;
+        const key = window.appState.getKey(keyId);
+        this.adminCounterSelectedKey = keyId;
+        this.adminCounterNfcUid = key ? key.nfcUid : "04:B2:77:A1:9F:80";
+        if (actionSelect) this.adminCounterAction = actionSelect.value;
+
+        if (window.SoundManager) window.SoundManager.playNfcTap();
+        this.adminCounterStep = 2;
+        this.renderAdminView();
+      });
+    }
+
+    // When step 2 loads, start camera
+    if (this.adminCounterStep === 2) {
+      setTimeout(() => {
+        window.QRNfcSimulator.startCamera('adminCameraVideo', (code) => {
+          this.adminCounterToUser = "Personnel (" + code.slice(0, 10) + ")";
+          this.adminCounterQrToken = code;
+          this.adminCounterStep = 3;
+          this.renderAdminView();
+        });
+      }, 50);
+    }
+
+    const btnBack = document.getElementById('btnAdminBackToNfc');
+    if (btnBack) {
+      btnBack.addEventListener('click', () => {
+        window.QRNfcSimulator.stopCamera();
+        this.adminCounterStep = 1;
+        this.renderAdminView();
+      });
+    }
+
+    const btnConfirmQr = document.getElementById('btnAdminConfirmQr');
+    if (btnConfirmQr) {
+      btnConfirmQr.addEventListener('click', () => {
+        window.QRNfcSimulator.stopCamera();
+        const val = document.getElementById('adminUserSelect').value;
+        const [userName, token] = val.split('|');
+        this.adminCounterToUser = userName;
+        this.adminCounterQrToken = token;
+
+        if (window.SoundManager) window.SoundManager.playQrScan();
+        this.adminCounterStep = 3;
+        this.renderAdminView();
+      });
+    }
+
+    const btnCancel = document.getElementById('btnAdminCancelCounter');
+    if (btnCancel) {
+      btnCancel.addEventListener('click', () => {
+        this.adminCounterStep = 1;
+        this.renderAdminView();
+      });
+    }
+
+    const btnExec = document.getElementById('btnAdminExecuteCounter');
+    if (btnExec) {
+      btnExec.addEventListener('click', () => {
+        const purpose = document.getElementById('adminCounterPurpose').value;
+        const key = window.appState.getKey(this.adminCounterSelectedKey);
+
+        const res = window.KeyManager.processKeyTransaction({
+          keyId: this.adminCounterSelectedKey,
+          roomCode: key ? key.roomCode : "CIT-101",
+          nfcUid: this.adminCounterNfcUid,
+          qrToken: this.adminCounterQrToken,
+          fromUser: this.adminCounterAction === 'Borrowed' ? "In Cabinet (Dean's Office)" : (this.adminCounterAction === 'Returned' ? this.adminCounterToUser : "Dean's Office Counter"),
+          toUser: this.adminCounterAction === 'Returned' ? "In Cabinet (Dean's Office)" : this.adminCounterToUser,
+          actionType: this.adminCounterAction, // "Borrowed" | "Returned" | "Transfered"
+          purpose: purpose,
+          loggedLocation: "Dean's Office Counter"
+        });
+
+        if (res.success) {
+          this.adminCounterStep = 1;
+          this.showToast(`[${this.adminCounterAction}] Logged successfully at Dean's Office Counter.`, 'success');
+          this.renderAdminView();
+        }
+      });
+    }
+  },
+
+  /**
+   * 5. Admin: Key Logs (Renamed from P2P Key Transfers)
    * Action Types strictly: "Borrowed", "Returned", "Transfered"
    */
   getAdminKeyLogsHTML() {
@@ -689,8 +987,8 @@ const appUi = {
           <h2>Key Logs</h2>
           <p>Official ledger of all key borrowings, returns, and transfers logged in the Dean's Office or via mobile.</p>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="appUi.openDeansCounterModal()">
-          🔑 Dean's Office Key Counter (Borrow / Return / Transfer)
+        <button class="btn btn-primary btn-sm" onclick="appUi.switchAdminTab('keycounter')">
+          📟 Open Key Counter Station
         </button>
       </div>
 
@@ -766,102 +1064,7 @@ const appUi = {
   },
 
   /**
-   * Dean's Office Key Counter Modal
-   * Students and faculty can log key borrowings, returns, and transfers in the Dean's Office
-   */
-  openDeansCounterModal() {
-    const modal = document.getElementById('genericDetailModal');
-    if (!modal) return;
-
-    const data = window.appState.data;
-    const keys = data.keys;
-
-    document.getElementById('genericModalTitle').textContent = "Dean's Office Key Logging Counter";
-    document.getElementById('genericModalBody').innerHTML = `
-      <div style="font-size: 0.82rem; color: var(--c-text-muted); margin-bottom: 14px;">
-        Perform official physical key check-out, return, or transfer at the Dean's Office terminal with 2-factor NFC + QR verification.
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Action Type</label>
-        <select id="deansActionSelect" class="form-control">
-          <option value="Borrowed">Borrowed (Release key from cabinet to student/faculty)</option>
-          <option value="Returned">Returned (Surrender key back to Dean's Office cabinet)</option>
-          <option value="Transfered">Transfered (Custody transfer verified at Dean's office)</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Step 1: Physical Key NFC Card Identification</label>
-        <select id="deansKeySelect" class="form-control">
-          ${keys.map(k => `
-            <option value="${k.keyId}|${k.roomCode}|${k.nfcUid}">
-              ${k.roomCode} Key (${k.keyId}) - NFC: ${k.nfcUid} [Current: ${k.currentHolder}]
-            </option>
-          `).join('')}
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Step 2: Personnel Personal QR Identity Verification</label>
-        <select id="deansUserSelect" class="form-control">
-          <option value="Juan Dela Cruz (Student)|QR-STU-2024-0012-JUAN">Juan Dela Cruz (Student ID: 2024-0012-MR)</option>
-          <option value="Engr. Maria Elena Bautista (Faculty)|QR-FAC-001-BAUTISTA">Engr. Maria Elena Bautista (Faculty FAC-001)</option>
-          <option value="Prof. Roberto Santos (Faculty)|QR-FAC-002-SANTOS">Prof. Roberto Santos (Faculty FAC-002)</option>
-          <option value="Prof. Liezel Fernando (Faculty)|QR-FAC-004-FERNANDO">Prof. Liezel Fernando (Faculty FAC-004)</option>
-          <option value="Dean's Office Cabinet|QR-CABINET-DEAN">Dean's Office Key Cabinet</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Purpose / Class Session</label>
-        <input type="text" id="deansPurposeInput" class="form-control" value="Official Academic Laboratory Class" placeholder="e.g. Laboratory Session, Makeup Class">
-      </div>
-
-      <button class="btn btn-primary" id="btnSubmitDeansLog" style="width: 100%;">
-        Complete & Save Key Log
-      </button>
-    `;
-
-    modal.classList.add('active');
-
-    const btnSubmit = document.getElementById('btnSubmitDeansLog');
-    if (btnSubmit) {
-      btnSubmit.addEventListener('click', () => {
-        const actionType = document.getElementById('deansActionSelect').value;
-        const keyVal = document.getElementById('deansKeySelect').value.split('|');
-        const userVal = document.getElementById('deansUserSelect').value.split('|');
-        const purpose = document.getElementById('deansPurposeInput').value;
-
-        const keyId = keyVal[0];
-        const roomCode = keyVal[1];
-        const nfcUid = keyVal[2];
-
-        const targetUser = userVal[0];
-        const qrToken = userVal[1];
-
-        const res = window.KeyManager.processKeyTransaction({
-          keyId: keyId,
-          roomCode: roomCode,
-          nfcUid: nfcUid,
-          qrToken: qrToken,
-          fromUser: actionType === 'Borrowed' ? "Dean's Office Cabinet" : (actionType === 'Returned' ? targetUser : "Dean's Office Counter"),
-          toUser: actionType === 'Returned' ? "In Cabinet (Dean's Office)" : targetUser,
-          actionType: actionType, // "Borrowed" | "Returned" | "Transfered"
-          purpose: purpose,
-          loggedLocation: "Dean's Office Counter"
-        });
-
-        if (res.success) {
-          appUi.closeModal('genericDetailModal');
-          appUi.render();
-        }
-      });
-    }
-  },
-
-  /**
-   * 5. Admin: Facility Problem Reports Desk
+   * 6. Admin: Facility Problem Reports Desk
    */
   getAdminReportsHTML() {
     const reports = window.appState.data.reports || [];
@@ -974,7 +1177,7 @@ const appUi = {
 
   /**
    * Mobile Feature 1: Minimalist Room Availability Dashboard
-   * ONLY displays: what is occupied, what is not, and what class is occupying it.
+   * Explicitly displays Key Status for every room!
    */
   getMobileRoomsHTML() {
     const rooms = window.appState.data.rooms;
@@ -988,12 +1191,27 @@ const appUi = {
       <div class="room-minimal-list">
         ${rooms.map(room => {
           const isOcc = room.status === 'occupied';
+          const isKeyBorrowed = room.keyStatus === 'Borrowed';
+          const keyHolder = room.keyHolder || (isKeyBorrowed ? "In Custody" : "In Cabinet (Dean's Office)");
+
           return `
             <div class="room-minimal-item ${isOcc ? 'occupied' : 'available'}">
               <div class="room-min-header">
                 <span class="room-min-code">${room.code} - ${room.name}</span>
                 <span class="badge-status ${room.status}">${room.status}</span>
               </div>
+
+              <!-- Explicit Key Status Row in Mobile -->
+              <div class="room-key-status-row">
+                <span>🔑 <strong>Key Status:</strong></span>
+                <span class="badge-status ${isKeyBorrowed ? 'occupied' : 'available'}">
+                  ${isKeyBorrowed ? 'Borrowed' : 'In Cabinet'}
+                </span>
+              </div>
+              <div style="font-size: 0.7rem; color: var(--c-text-muted); margin-bottom: 4px;">
+                Key Holder: <strong>${keyHolder}</strong>
+              </div>
+
               <div class="room-min-occupant">
                 ${isOcc && room.occupancy ? `
                   <strong>Class:</strong> ${room.occupancy.class} (${room.occupancy.faculty || 'In session'})
@@ -1010,12 +1228,12 @@ const appUi = {
 
   /**
    * Mobile Feature 2: Peer-to-Peer Key Transfer (Borrow, Return, Transfer)
-   * Action Types strictly: "Borrowed", "Returned", "Transfered"
+   * Step 1: Shows NFC Scanner UI
+   * Step 2: Shows Camera / QR Scanner UI
    */
   getMobileTransferHTML() {
     const user = window.appState.currentUser;
     const personalQrSvg = window.QRNfcSimulator.generatePersonalQRSVG(user.qrCodeData || user.id, 130);
-    const keys = window.appState.data.keys;
 
     return `
       <div style="margin-bottom: 12px;">
@@ -1063,31 +1281,40 @@ const appUi = {
     if (this.currentP2PStep === 1) {
       return `
         <div class="p2p-verification-screen">
-          <div class="scan-box-clean">
-            <div class="scan-icon-clean">📡</div>
-            <strong style="font-size: 0.85rem; color: var(--c-primary);">Step 1: Physical Key NFC Card</strong>
+          <div class="form-group" style="text-align: left; margin-bottom: 10px;">
+            <label class="form-label">Action to Perform:</label>
+            <select id="mobileActionTypeSelect" class="form-control" style="font-size: 0.8rem;">
+              <option value="Borrowed" ${this.mobileSelectedAction === 'Borrowed' ? 'selected' : ''}>Borrowed (Borrow physical key)</option>
+              <option value="Returned" ${this.mobileSelectedAction === 'Returned' ? 'selected' : ''}>Returned (Surrender key to cabinet)</option>
+              <option value="Transfered" ${this.mobileSelectedAction === 'Transfered' ? 'selected' : ''}>Transfered (P2P Handover to peer)</option>
+            </select>
+          </div>
 
-            <div class="form-group" style="text-align: left; margin-top: 10px;">
-              <label class="form-label">Action to Perform:</label>
-              <select id="mobileActionTypeSelect" class="form-control" style="font-size: 0.8rem;">
-                <option value="Borrowed" ${this.mobileSelectedAction === 'Borrowed' ? 'selected' : ''}>Borrowed (Borrow physical key)</option>
-                <option value="Returned" ${this.mobileSelectedAction === 'Returned' ? 'selected' : ''}>Returned (Surrender key to cabinet)</option>
-                <option value="Transfered" ${this.mobileSelectedAction === 'Transfered' ? 'selected' : ''}>Transfered (P2P Handover to peer)</option>
-              </select>
+          <!-- Step 1: NFC Scanner Visual Box -->
+          <div class="nfc-scanner-box">
+            <div class="nfc-wave-container">
+              <div class="nfc-wave-circle"></div>
+              <div class="nfc-wave-circle"></div>
+              <div class="nfc-wave-circle"></div>
+              <div class="nfc-core-icon">📡</div>
             </div>
+            <strong style="font-size: 0.88rem; color: var(--c-primary); display: block;">Step 1: Physical Key NFC Scanner</strong>
+            <p style="font-size: 0.72rem; color: var(--c-text-muted); margin: 4px 0 12px 0;">
+              Hold device against physical RFID/NFC key tag or select below.
+            </p>
 
             <div class="form-group" style="text-align: left;">
-              <label class="form-label">Select Key to Verify:</label>
+              <label class="form-label">Select Key Tag Detected:</label>
               <select id="p2pKeySelect" class="form-control" style="font-size: 0.8rem;">
                 ${keys.map(k => `
                   <option value="${k.keyId}" ${this.selectedP2PKey === k.keyId ? 'selected' : ''}>
-                    ${k.roomCode} Key (NFC UID: ${k.nfcUid}) - Holder: ${k.currentHolder}
+                    ${k.roomCode} Key (${k.keyId}) - NFC: ${k.nfcUid} [${k.status}]
                   </option>
                 `).join('')}
               </select>
             </div>
             <button class="btn btn-primary" id="btnConfirmNfcStep" style="width: 100%;">
-              Tap & Verify Physical Key NFC
+              Tap & Verify Key NFC Card
             </button>
           </div>
         </div>
@@ -1095,35 +1322,45 @@ const appUi = {
     } else if (this.currentP2PStep === 2) {
       return `
         <div class="p2p-verification-screen">
-          <div class="scan-box-clean">
-            <div class="scan-icon-clean">📷</div>
-            <strong style="font-size: 0.85rem; color: var(--c-primary);">Step 2: Scan Personnel QR Code</strong>
-            <p style="font-size: 0.74rem; color: var(--c-text-muted); margin: 6px 0 14px 0;">
-              Key <strong>${this.selectedP2PKey}</strong> verified. Now scan borrower / recipient QR code.
-            </p>
+          <strong style="font-size: 0.88rem; color: var(--c-primary); display: block; margin-bottom: 4px;">
+            Step 2: Camera Personal QR Scanner
+          </strong>
+          <p style="font-size: 0.72rem; color: var(--c-text-muted); margin-bottom: 10px;">
+            Key <strong>${this.selectedP2PKey}</strong> verified. Now scan recipient / borrower QR code.
+          </p>
 
-            <div class="form-group" style="text-align: left;">
-              <label class="form-label">Recipient / Borrower Identity:</label>
-              <select id="p2pRecipientSelect" class="form-control" style="font-size: 0.8rem;">
-                <option value="Juan Dela Cruz (Student)|QR-STU-2024-0012-JUAN">Juan Dela Cruz (Student ID: 2024-0012-MR)</option>
-                <option value="Engr. Maria Elena Bautista (Faculty)|QR-FAC-001-BAUTISTA">Engr. Maria Elena Bautista (Faculty FAC-001)</option>
-                <option value="Prof. Roberto Santos (Faculty)|QR-FAC-002-SANTOS">Prof. Roberto Santos (Faculty FAC-002)</option>
-                <option value="In Cabinet (Dean's Office)|QR-CABINET-SLOT-01">In Cabinet (Dean's Office)</option>
-              </select>
+          <!-- Live Camera Viewport -->
+          <div class="camera-scanner-viewport">
+            <video id="mobileCameraVideo" autoplay playsinline muted></video>
+            <div class="camera-guide-box">
+              <div class="camera-laser-bar"></div>
             </div>
+          </div>
+          <div id="mobileCameraVideo_status" style="font-size: 0.7rem; color: var(--c-text-muted); margin-bottom: 10px;">
+            Camera active: Point at personnel QR badge
+          </div>
 
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-outline" id="btnBackToNfcStep" style="flex: 1;">Back</button>
-              <button class="btn btn-primary" id="btnConfirmQrStep" style="flex: 2;">Verify Personal QR</button>
-            </div>
+          <div style="font-size: 0.74rem; text-align: left; background: var(--c-surface); padding: 8px; border-radius: 4px; border: 1px solid var(--c-border); margin-bottom: 10px;">
+            <label class="form-label">Or Select Personnel to Simulate Scan:</label>
+            <select id="p2pRecipientSelect" class="form-control" style="font-size: 0.78rem;">
+              <option value="Juan Dela Cruz (Student)|QR-STU-2024-0012-JUAN">Juan Dela Cruz (Student ID: 2024-0012-MR)</option>
+              <option value="Engr. Maria Elena Bautista (Faculty)|QR-FAC-001-BAUTISTA">Engr. Maria Elena Bautista (Faculty FAC-001)</option>
+              <option value="Prof. Roberto Santos (Faculty)|QR-FAC-002-SANTOS">Prof. Roberto Santos (Faculty FAC-002)</option>
+              <option value="In Cabinet (Dean's Office)|QR-CABINET-SLOT-01">In Cabinet (Dean's Office)</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-outline" id="btnBackToNfcStep" style="flex: 1;">Back</button>
+            <button class="btn btn-primary" id="btnConfirmQrStep" style="flex: 2;">Verify Scanned QR</button>
           </div>
         </div>
       `;
     } else {
       return `
         <div class="p2p-verification-screen" style="text-align: left;">
-          <div style="background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; font-size: 0.8rem;">
-            <strong style="color: var(--c-primary); display: block; margin-bottom: 8px;">Authorization Summary:</strong>
+          <div style="background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 12px; font-size: 0.8rem;">
+            <strong style="color: var(--c-primary); display: block; margin-bottom: 6px;">Authorization Summary:</strong>
             <div>Action Type: <strong>${this.mobileSelectedAction}</strong></div>
             <div>Key: <strong>${this.selectedP2PKey}</strong></div>
             <div>NFC Tag: <code>${this.verifiedNfcUid}</code></div>
@@ -1170,9 +1407,22 @@ const appUi = {
       });
     }
 
+    // If step 2, start camera scanner
+    if (this.currentP2PStep === 2) {
+      setTimeout(() => {
+        window.QRNfcSimulator.startCamera('mobileCameraVideo', (code) => {
+          this.verifiedToUser = "Scanned Personnel (" + code.slice(0, 8) + ")";
+          this.verifiedQrToken = code;
+          this.currentP2PStep = 3;
+          this.renderMobileView();
+        });
+      }, 50);
+    }
+
     const btnBack = document.getElementById('btnBackToNfcStep');
     if (btnBack) {
       btnBack.addEventListener('click', () => {
+        window.QRNfcSimulator.stopCamera();
         this.currentP2PStep = 1;
         this.renderMobileView();
       });
@@ -1181,6 +1431,7 @@ const appUi = {
     const btnConfirmQr = document.getElementById('btnConfirmQrStep');
     if (btnConfirmQr) {
       btnConfirmQr.addEventListener('click', () => {
+        window.QRNfcSimulator.stopCamera();
         const val = document.getElementById('p2pRecipientSelect').value;
         const [userName, token] = val.split('|');
         this.verifiedToUser = userName;
@@ -1195,6 +1446,7 @@ const appUi = {
     const btnCancel = document.getElementById('btnCancelP2P');
     if (btnCancel) {
       btnCancel.addEventListener('click', () => {
+        window.QRNfcSimulator.stopCamera();
         this.currentP2PStep = 1;
         this.renderMobileView();
       });

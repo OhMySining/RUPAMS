@@ -1,9 +1,9 @@
 /* ==========================================================================
    RUPAMS - Mobile Web App Styles (Minimalist Light Edition)
    Strictly 3 Features:
-   1. Peer-to-Peer Return/Borrow Key Transfer (NFC + QR)
-   2. Facility Problem Report with Photo Upload
-   3. Minimalist Rooms Availability Dashboard
+   1. Minimalist Rooms Availability Dashboard (With Key Status)
+   2. Key Handover (NFC Scanner in Step 1 & Camera/QR Scanner in Step 2)
+   3. Facility Problem Report with Photo Upload
    ========================================================================== */
 
 .mobile-viewport-container {
@@ -80,7 +80,7 @@
   padding: 16px;
 }
 
-/* 1. Room Status Minimal List */
+/* 1. Room Status Minimal List (With Explicit Key Status) */
 .room-minimal-list {
   display: flex;
   flex-direction: column;
@@ -115,13 +115,25 @@
   color: var(--c-primary);
 }
 
+.room-key-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 6px 0;
+  padding: 4px 8px;
+  background: var(--c-secondary-light);
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  border: 1px solid var(--c-border);
+}
+
 .room-min-occupant {
   font-size: 0.76rem;
   color: var(--c-secondary);
   margin-top: 4px;
 }
 
-/* 2. P2P Key Transfer Flow */
+/* 2. Key Transfer / Handover Flow */
 .p2p-card {
   background: var(--c-secondary-light);
   border: 1px solid var(--c-border);
@@ -159,21 +171,95 @@
 
 .p2p-verification-screen {
   text-align: center;
-  padding: 10px 0;
+  padding: 6px 0;
 }
 
-.scan-box-clean {
-  border: 2px dashed var(--c-border);
+/* Step 1: NFC Scanner Minimalist UI */
+.nfc-scanner-box {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
   padding: 20px 14px;
-  background: var(--c-surface);
   margin-bottom: 14px;
+  text-align: center;
 }
 
-.scan-icon-clean {
-  font-size: 2rem;
-  margin-bottom: 6px;
+.nfc-wave-container {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 12px auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nfc-wave-circle {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  animation: nfc-pulse 1.8s infinite ease-out;
+}
+
+.nfc-wave-circle:nth-child(1) { width: 34px; height: 34px; animation-delay: 0s; }
+.nfc-wave-circle:nth-child(2) { width: 52px; height: 52px; animation-delay: 0.4s; }
+.nfc-wave-circle:nth-child(3) { width: 70px; height: 70px; animation-delay: 0.8s; }
+
+.nfc-core-icon {
+  font-size: 1.5rem;
+  z-index: 2;
   color: var(--c-primary);
+}
+
+@keyframes nfc-pulse {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+/* Step 2: Camera / QR Scanner Viewport */
+.camera-scanner-viewport {
+  background: #0f172a;
+  border-radius: var(--radius-sm);
+  width: 100%;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-scanner-viewport video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-guide-box {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.camera-laser-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--c-red);
+  box-shadow: 0 0 4px var(--c-red);
+  animation: laser-sweep 2s infinite ease-in-out;
+}
+
+@keyframes laser-sweep {
+  0% { top: 5%; }
+  50% { top: 95%; }
+  100% { top: 5%; }
 }
 
 /* 3. Problem Reporting Form */

@@ -258,3 +258,47 @@
   font-size: 0.78rem;
   color: var(--c-text-muted);
 }
+
+/* Dean's Office Key Counter Tab */
+.key-counter-panel {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 960px) {
+  .key-counter-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+.key-counter-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  box-shadow: var(--shadow-subtle);
+}
+
+.cabinet-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.cabinet-slot-card {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  background: var(--c-surface);
+  font-size: 0.76rem;
+}
+
+.cabinet-slot-card.in-cabinet {
+  border-left: 3px solid var(--c-green);
+}
+
+.cabinet-slot-card.borrowed {
+  border-left: 3px solid var(--c-red);
+  background: var(--c-secondary-light);
+}

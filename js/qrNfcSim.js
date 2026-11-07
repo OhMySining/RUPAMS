@@ -1,6 +1,6 @@
 /**
- * RUPAMS - NFC Card & QR Code Verification Handler
- * Light minimalist styling with client-side SVG QR rendering
+ * RUPAMS - NFC Card & Camera QR Code Scanner Handler
+ * Minimalist Light Theme Components
  */
 
 const QRNfcSimulator = {
@@ -10,7 +10,7 @@ const QRNfcSimulator = {
   /**
    * Generates a clean vector SVG QR code for Personal Identity Tokens
    */
-  generatePersonalQRSVG(payloadText, size = 160) {
+  generatePersonalQRSVG(payloadText, size = 150) {
     const hash = this._hashString(payloadText);
     const N = 21;
     const matrix = [];
@@ -70,8 +70,8 @@ const QRNfcSimulator = {
     }
 
     return `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" class="clean-qr-svg">
-        <rect width="${size}" height="${size}" fill="#ffffff" rx="6" />
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" class="clean-qr-svg" style="border: 1px solid #e2e8f0; border-radius: 4px;">
+        <rect width="${size}" height="${size}" fill="#ffffff" />
         ${rects}
       </svg>
     `;
@@ -87,9 +87,10 @@ const QRNfcSimulator = {
   },
 
   /**
-   * Camera QR Scanner
+   * Start live webcam scanning in specified video element
    */
   async startCamera(videoElementId, onScanSuccess) {
+    this.stopCamera(); // stop any existing stream
     const video = document.getElementById(videoElementId);
     if (!video) return;
 
@@ -102,6 +103,7 @@ const QRNfcSimulator = {
         video.srcObject = stream;
         await video.play();
 
+        // Check for native BarcodeDetector API in modern browsers
         if ('BarcodeDetector' in window) {
           const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
           this.scannerInterval = setInterval(async () => {
@@ -118,7 +120,11 @@ const QRNfcSimulator = {
         }
       }
     } catch (err) {
-      console.warn("Camera could not be accessed:", err);
+      console.warn("Camera could not be accessed:", err.message);
+      const statusEl = document.getElementById(videoElementId + '_status');
+      if (statusEl) {
+        statusEl.textContent = "Camera unavailable or permission denied. Use one-click simulation below.";
+      }
     }
   },
 
