@@ -1,9 +1,10 @@
-/**
+﻿/**
  * RUPAMS - Central State Management & Reactive Store
  * Persistent storage with LocalStorage & event bus
+ * College of Industrial Technology (CIT) - URS Morong Campus
  */
 
-const STORAGE_KEY = 'RUPAMS_DATABASE_v3.0';
+const STORAGE_KEY = 'RUPAMS_DATABASE_v5.0';
 
 class AppState {
   constructor() {
@@ -19,7 +20,7 @@ class AppState {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.rooms && parsed.schedules && parsed.reports && (parsed.keyLogs || parsed.transfers)) {
+        if (parsed.rooms && parsed.schedules && parsed.schedules.length >= 300 && parsed.reports && parsed.publication) {
           if (!parsed.keyLogs) parsed.keyLogs = parsed.transfers || [];
           return parsed;
         }
@@ -113,6 +114,120 @@ class AppState {
   }
 
   /**
+   * Helper: Retrieve all distinct Year & Section cohorts in database
+   */
+  getDistinctYearSections() {
+    const schedules = this.data.schedules || [];
+    const map = new Map();
+
+    schedules.forEach(s => {
+      const prog = s.program || 'BSIT';
+      const yr = s.year || '1st Year';
+      const sec = s.section || 'Section A';
+      const key = `${prog} | ${yr} - ${sec}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key: key,
+          program: prog,
+          year: yr,
+          section: sec,
+          displayName: `${yr} - ${sec} (${prog})`,
+          shortName: `${yr} - ${sec}`
+        });
+      }
+    });
+
+    const arr = Array.from(map.values());
+    const yearOrder = { "1st Year": 1, "2nd Year": 2, "3rd Year": 3, "4th Year": 4 };
+    arr.sort((a, b) => {
+      if (a.program !== b.program) return a.program.localeCompare(b.program);
+      const ya = yearOrder[a.year] || 99;
+      const yb = yearOrder[b.year] || 99;
+      if (ya !== yb) return ya - yb;
+      return a.section.localeCompare(b.section);
+    });
+    return arr;
+  }
+
+  /**
+   * Helper: Retrieve schedules filtered by cohort key
+   */
+  getSchedulesByCohortKey(key) {
+    if (!key || key === 'ALL') return this.data.schedules || [];
+    const parts = key.split(' | ');
+    const prog = parts[0];
+    const yrSec = parts[1] || '';
+    const [yr, sec] = yrSec.split(' - ');
+
+    return (this.data.schedules || []).filter(s => {
+      if (prog && s.program !== prog) return false;
+      if (yr && s.year !== yr) return false;
+      if (sec && s.section !== sec) return false;
+      return true;
+    });
+  }
+
+  /**
+   * Check if a cohort timetable is officially published
+   */
+  isCohortPublished(key) {
+    if (!this.data.publication) return false;
+    if (!this.data.publication.isPublishedGlobally) return false;
+    if (key === 'ALL') return this.data.publication.isPublishedGlobally;
+
+    if (this.data.publication.publishedSections && this.data.publication.publishedSections[key] !== undefined) {
+      return !!this.data.publication.publishedSections[key];
+    }
+    return true; // Default to true if globally published
+  }
+
+  /**
+   * Publish Timetable to Student & Faculty Mobile App
+   */
+  publishTimetable(cohortKey = 'ALL') {
+    if (!this.data.publication) {
+      this.data.publication = {
+        isPublishedGlobally: true,
+        publishedAt: new Date().toISOString(),
+        publishedBy: this.currentUser ? `${this.currentUser.name} (${this.currentUser.role.toUpperCase()})` : "Dean's Office",
+        publishedSections: {}
+      };
+    }
+    this.data.publication.isPublishedGlobally = true;
+    this.data.publication.publishedAt = new Date().toISOString();
+    this.data.publication.publishedBy = this.currentUser ? `${this.currentUser.name} (${this.currentUser.role.toUpperCase()})` : "Dean's Office";
+
+    if (cohortKey === 'ALL') {
+      const distinct = this.getDistinctYearSections();
+      distinct.forEach(d => {
+        this.data.publication.publishedSections[d.key] = true;
+      });
+    } else {
+      this.data.publication.publishedSections[cohortKey] = true;
+    }
+
+    this.save();
+    this.emit('publicationChanged', this.data.publication);
+    return this.data.publication;
+  }
+
+  /**
+   * Unpublish Timetable from Mobile App
+   */
+  unpublishTimetable(cohortKey = 'ALL') {
+    if (!this.data.publication) return;
+    if (cohortKey === 'ALL') {
+      this.data.publication.isPublishedGlobally = false;
+      this.data.publication.publishedSections = {};
+    } else {
+      this.data.publication.publishedSections[cohortKey] = false;
+    }
+    this.save();
+    this.emit('publicationChanged', this.data.publication);
+    return this.data.publication;
+  }
+
+  /**
    * Log Key Transaction (Borrowed, Returned, Transfered)
    * Can be initiated either from Mobile or at the Dean's Office Web Counter.
    */
@@ -203,15 +318,23 @@ class AppState {
 
   /**
    * Automated Spreadsheet Export (CSV / Excel format)
-   * Includes Program, Year Level, and Section
+   * Can export full college spreadsheet or filtered specifically to a selected Year & Section
    */
-  exportSpreadsheetCSV() {
-    const schedules = this.data.schedules;
+  exportSpreadsheetCSV(cohortKey = null) {
     const institution = this.data.institution;
+    let schedules = this.data.schedules;
+    let titleContext = `OFFICIAL SEMESTRAL TIMETABLE SPREADSHEET (${institution.semester} AY ${institution.academicYear})`;
+    let filename = `CIT_Timetable_Spreadsheet_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    if (cohortKey && cohortKey !== 'ALL') {
+      schedules = this.getSchedulesByCohortKey(cohortKey);
+      titleContext = `OFFICIAL TIMETABLE - COHORT: ${cohortKey} (${institution.semester} AY ${institution.academicYear})`;
+      filename = `CIT_Timetable_${cohortKey.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+    }
 
     let csvContent = `\uFEFF${institution.university} - ${institution.campus}\n`;
     csvContent += `${institution.college}\n`;
-    csvContent += `OFFICIAL SEMESTRAL TIMETABLE SPREADSHEET (${institution.semester} AY ${institution.academicYear})\n\n`;
+    csvContent += `${titleContext}\n\n`;
 
     // Headers with Program, Year, Section
     csvContent += "Schedule ID,Program,Year Level,Section,Course Code,Descriptive Title,Faculty / Instructor,Day,Start Time,End Time,Assigned Room,Enrolled Count\n";
@@ -238,7 +361,7 @@ class AppState {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `CIT_Timetable_Spreadsheet_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
