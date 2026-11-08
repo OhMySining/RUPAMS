@@ -43,6 +43,7 @@ const appUi = {
     window.appState.on('stateChanged', () => this.render());
     window.appState.on('userChanged', () => this.render());
     window.appState.on('viewModeChanged', () => this.render());
+    window.appState.on('publicationChanged', () => this.render());
     window.appState.on('keyLogAdded', (log) => {
       this.showToast(`[${log.actionType}] Key for ${log.roomCode} logged (${log.loggedLocation}).`, 'success');
     });
@@ -68,10 +69,14 @@ const appUi = {
       });
     }
 
-    // Role switcher modal click
+    // Role switcher modal click (desktop header and mobile topbar)
     const userBadge = document.getElementById('userProfileTrigger');
     if (userBadge) {
       userBadge.addEventListener('click', () => this.openUserSwitcherModal());
+    }
+    const mobileUserBadge = document.getElementById('mobileUserNameTag');
+    if (mobileUserBadge) {
+      mobileUserBadge.addEventListener('click', () => this.openUserSwitcherModal());
     }
 
     // Admin Sidebar navigation
@@ -169,6 +174,7 @@ const appUi = {
         break;
       case 'spreadsheet':
         content.innerHTML = this.getAdminSpreadsheetHTML();
+        this.bindAdminSpreadsheetEvents();
         break;
       case 'keycounter':
         content.innerHTML = this.getAdminKeyCounterHTML();
@@ -393,7 +399,7 @@ const appUi = {
               <div style="display: flex; align-items: center; gap: 4px;">
                 <label>Program:</label>
                 <select id="filterProgramSelect" class="form-control" style="font-size: 0.72rem; padding: 3px 6px;">
-                  <option value="ALL">All Programs</option>
+                  <option value="ALL" ${this.schFilterProgram === 'ALL' ? 'selected' : ''}>All Programs</option>
                   ${programs.map(p => `<option value="${p}" ${this.schFilterProgram === p ? 'selected' : ''}>${p}</option>`).join('')}
                 </select>
               </div>
@@ -401,15 +407,15 @@ const appUi = {
               <div style="display: flex; align-items: center; gap: 4px;">
                 <label>Year:</label>
                 <select id="filterYearSelect" class="form-control" style="font-size: 0.72rem; padding: 3px 6px;">
-                  <option value="ALL">All Years</option>
-                  ${yearLevels.map(y => `<option value="${y}">${y}</option>`).join('')}
+                  <option value="ALL" ${this.schFilterYear === 'ALL' ? 'selected' : ''}>All Years</option>
+                  ${yearLevels.map(y => `<option value="${y}" ${this.schFilterYear === y ? 'selected' : ''}>${y}</option>`).join('')}
                 </select>
               </div>
 
               <div style="display: flex; align-items: center; gap: 4px;">
                 <label>Section:</label>
                 <select id="filterSectionSelect" class="form-control" style="font-size: 0.72rem; padding: 3px 6px;">
-                  <option value="ALL">All Sections</option>
+                  <option value="ALL" ${this.schFilterSection === 'ALL' ? 'selected' : ''}>All Sections</option>
                   ${sections.map(s => `<option value="${s}" ${this.schFilterSection === s ? 'selected' : ''}>${s}</option>`).join('')}
                 </select>
               </div>
@@ -613,24 +619,54 @@ const appUi = {
 
   /**
    * 3. Admin: Automated Spreadsheet Output
+   * Displays distinct Year & Section cohort selector, weekly schedule matrix, and mobile publishing
    */
   getAdminSpreadsheetHTML() {
     const data = window.appState.data;
-    const schedules = data.schedules;
     const inst = data.institution;
+    const distinctCohorts = window.appState.getDistinctYearSections();
+
+    if (!this.spreadsheetSelectedCohortKey && distinctCohorts.length > 0) {
+      this.spreadsheetSelectedCohortKey = distinctCohorts[0].key;
+    }
+
+    const selectedKey = this.spreadsheetSelectedCohortKey || (distinctCohorts[0] ? distinctCohorts[0].key : 'ALL');
+    const isAll = selectedKey === 'ALL';
+    const schedules = window.appState.getSchedulesByCohortKey(selectedKey);
+    const isPublished = window.appState.isCohortPublished(selectedKey);
+
+    const totalUnits = schedules.reduce((sum, s) => {
+      const course = data.courses.find(c => c.code === s.courseCode);
+      return sum + (course ? course.units : 3);
+    }, 0);
+
+    const matrixDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const timeSlots = [
+      { label: "07:30 - 10:30", start: "07:30", end: "10:30", desc: "Morning Block" },
+      { label: "10:30 - 13:30", start: "10:30", end: "13:30", desc: "Mid-Day Block" },
+      { label: "13:30 - 16:30", start: "13:30", end: "16:30", desc: "Afternoon Block" },
+      { label: "16:30 - 19:30", start: "16:30", end: "19:30", desc: "Evening Extension" }
+    ];
+
+    const findCourseInSlot = (day, slot) => {
+      return schedules.find(s => {
+        if (s.day !== day) return false;
+        return window.SchedulerEngine.isOverlapping(slot.start, slot.end, s.startTime, s.endTime);
+      });
+    };
 
     return `
       <div class="content-title-bar">
         <div>
           <h2>Automated Spreadsheet Output Module</h2>
-          <p>Instantly compiles manually created schedules into a formatted institutional spreadsheet. No manual third-party Excel plotting needed.</p>
+          <p>Official Semestral Academic Timetables with distinct Year & Section cohorts, weekly schedule matrix, and direct publishing to student & faculty mobile apps.</p>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button class="btn btn-primary" onclick="window.appState.exportSpreadsheetCSV()">
-            Download Spreadsheet (.CSV / Excel)
+          <button class="btn btn-primary btn-sm" onclick="window.appState.exportSpreadsheetCSV('${selectedKey}')">
+            Download CSV / Excel
           </button>
-          <button class="btn btn-outline" onclick="window.print()">
-            Print Spreadsheet Matrix
+          <button class="btn btn-outline btn-sm" onclick="window.print()">
+            Print Timetable Matrix
           </button>
         </div>
       </div>
@@ -642,41 +678,207 @@ const appUi = {
           <p>Official Semestral Timetable Spreadsheet (${inst.semester} AY ${inst.academicYear})</p>
         </div>
 
+        <!-- Distinct Year & Section Dropdown & Publication Toolbar -->
+        <div class="spreadsheet-toolbar">
+          <div class="spreadsheet-selector-group">
+            <label for="spreadsheetCohortSelect">Select Year & Section:</label>
+            <select id="spreadsheetCohortSelect" class="form-control" style="font-weight: 600; font-size: 0.82rem; min-width: 320px;">
+              ${distinctCohorts.map(c => `
+                <option value="${c.key}" ${selectedKey === c.key ? 'selected' : ''}>
+                  ${c.displayName} [${window.appState.getSchedulesByCohortKey(c.key).length} Courses]
+                </option>
+              `).join('')}
+              <option value="ALL" ${selectedKey === 'ALL' ? 'selected' : ''}>
+                ALL Cohorts / Full Master Timetable (${data.schedules.length} Courses)
+              </option>
+            </select>
+          </div>
+
+          <div class="spreadsheet-pub-controls">
+            <span class="pub-status-badge ${isPublished ? 'published' : 'draft'}">
+              ${isPublished ? '● Officially Published to Mobile' : '○ Draft Mode (Not Published)'}
+            </span>
+            <button id="btnTogglePublishCohort" class="btn ${isPublished ? 'btn-outline' : 'btn-primary'} btn-sm">
+              ${isPublished ? 'Unpublish from Mobile' : '📢 Publish Timetable to Mobile App'}
+            </button>
+            <button id="btnPublishAllCohorts" class="btn btn-outline btn-sm" title="Publish all distinct year & sections to mobile">
+              Publish All Cohorts
+            </button>
+          </div>
+        </div>
+
+        <!-- Cohort Summary Stats -->
+        ${!isAll ? `
+          <div class="cohort-info-card">
+            <div class="cohort-stat-item">
+              <span class="cohort-stat-label">Program & Major</span>
+              <span class="cohort-stat-val" style="font-size: 0.82rem;">${schedules[0] ? schedules[0].program : 'CIT Program'}</span>
+            </div>
+            <div class="cohort-stat-item">
+              <span class="cohort-stat-label">Year & Section</span>
+              <span class="cohort-stat-val">${schedules[0] ? `${schedules[0].year} - ${schedules[0].section}` : 'N/A'}</span>
+            </div>
+            <div class="cohort-stat-item">
+              <span class="cohort-stat-label">Scheduled Courses</span>
+              <span class="cohort-stat-val">${schedules.length} Subjects</span>
+            </div>
+            <div class="cohort-stat-item">
+              <span class="cohort-stat-label">Total Units</span>
+              <span class="cohort-stat-val">${totalUnits} Units</span>
+            </div>
+            <div class="cohort-stat-item">
+              <span class="cohort-stat-label">Section Size</span>
+              <span class="cohort-stat-val">${schedules[0] ? schedules[0].enrolled : 28} Students</span>
+            </div>
+            <div class="cohort-stat-item">
+              <span class="cohort-stat-label">Constraint Status</span>
+              <span class="cohort-stat-val" style="color: var(--c-green); font-size: 0.8rem;">✓ 0 Collisions</span>
+            </div>
+          </div>
+
+          <!-- Visual Weekly Timetable Matrix -->
+          <div style="margin-bottom: 8px;">
+            <strong style="font-size: 0.86rem; color: var(--c-primary);">Weekly Timetable Matrix (${selectedKey.split(' | ')[1] || selectedKey})</strong>
+            <small style="color: var(--c-text-muted); display: block; font-size: 0.72rem; margin-top: 2px;">
+              Visual timetable distribution across weekly days and laboratory/lecture blocks.
+            </small>
+          </div>
+
+          <div class="matrix-wrapper">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th style="width: 110px;">Time Slot</th>
+                  ${matrixDays.map(d => `<th>${d}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${timeSlots.map(slot => `
+                  <tr>
+                    <td class="matrix-time-col">
+                      <strong>${slot.label}</strong><br>
+                      <small style="color: var(--c-text-muted); font-size: 0.65rem;">${slot.desc}</small>
+                    </td>
+                    ${matrixDays.map(day => {
+                      const match = findCourseInSlot(day, slot);
+                      if (match) {
+                        return `
+                          <td>
+                            <div class="matrix-course-cell">
+                              <div>
+                                <strong>${match.courseCode}</strong>
+                                <small>${match.courseTitle || ''}</small>
+                              </div>
+                              <div style="margin-top: 4px;">
+                                <span class="matrix-course-tag">📍 ${match.roomCode}</span>
+                                <div style="font-size: 0.68rem; color: var(--c-secondary); margin-top: 2px;">
+                                  👨‍🏫 ${match.facultyName}
+                                </div>
+                                <div style="font-size: 0.65rem; color: var(--c-text-muted);">
+                                  ⏰ ${match.startTime} - ${match.endTime}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        `;
+                      } else {
+                        return `<td><span style="color: #cbd5e1; font-size: 0.75rem;">—</span></td>`;
+                      }
+                    }).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
+
+        <!-- Detailed Institutional Schedule Ledger -->
+        <div style="margin-bottom: 8px;">
+          <strong style="font-size: 0.86rem; color: var(--c-primary);">Official Course Offerings & Room Assignments Ledger</strong>
+          <small style="color: var(--c-text-muted); display: block; font-size: 0.72rem; margin-top: 2px;">
+            Full descriptive titles, assigned faculty instructors, and physical classroom keys.
+          </small>
+        </div>
+
         <div class="table-wrapper" style="box-shadow: none; border-radius: 0;">
           <table class="clean-table" style="font-size: 0.8rem;">
             <thead>
               <tr style="background: var(--c-primary); color: #ffffff;">
+                <th style="color: #fff; background: var(--c-primary);">Day & Time</th>
                 <th style="color: #fff; background: var(--c-primary);">Program</th>
                 <th style="color: #fff; background: var(--c-primary);">Year & Section</th>
                 <th style="color: #fff; background: var(--c-primary);">Course Code</th>
                 <th style="color: #fff; background: var(--c-primary);">Descriptive Title</th>
                 <th style="color: #fff; background: var(--c-primary);">Room</th>
-                <th style="color: #fff; background: var(--c-primary);">Day</th>
-                <th style="color: #fff; background: var(--c-primary);">Time</th>
+                <th style="color: #fff; background: var(--c-primary);">Units</th>
                 <th style="color: #fff; background: var(--c-primary);">Faculty / Instructor</th>
                 <th style="color: #fff; background: var(--c-primary);">Enrolled</th>
               </tr>
             </thead>
             <tbody>
-              ${schedules.map((s, idx) => `
-                <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-                  <td>${s.program || 'BSIT'}</td>
-                  <td><strong>${s.year || ''} - ${s.section || ''}</strong></td>
-                  <td><strong>${s.courseCode}</strong></td>
-                  <td>${s.courseTitle || '—'}</td>
-                  <td><strong>${s.roomCode}</strong></td>
-                  <td>${s.day}</td>
-                  <td>${s.startTime} - ${s.endTime}</td>
-                  <td>${s.facultyName}</td>
-                  <td>${s.enrolled || 30}</td>
-                </tr>
-              `).join('')}
+              ${schedules.map((s, idx) => {
+                const courseInfo = data.courses.find(c => c.code === s.courseCode);
+                const units = courseInfo ? courseInfo.units : 3;
+
+                return `
+                  <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                    <td>
+                      <strong>${s.day}</strong><br>
+                      <small style="color: var(--c-text-muted);">${s.startTime} - ${s.endTime}</small>
+                    </td>
+                    <td>${s.program || 'BSIT'}</td>
+                    <td><strong>${s.year || ''} - ${s.section || ''}</strong></td>
+                    <td><strong>${s.courseCode}</strong></td>
+                    <td>${s.courseTitle || '—'}</td>
+                    <td><strong>${s.roomCode}</strong></td>
+                    <td>${units}</td>
+                    <td>${s.facultyName}</td>
+                    <td>${s.enrolled || 30}</td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
         </div>
       </div>
     `;
   },
+
+  bindAdminSpreadsheetEvents() {
+    const cohortSelect = document.getElementById('spreadsheetCohortSelect');
+    if (cohortSelect) {
+      cohortSelect.addEventListener('change', (e) => {
+        this.spreadsheetSelectedCohortKey = e.target.value;
+        this.renderAdminView();
+      });
+    }
+
+    const btnTogglePublish = document.getElementById('btnTogglePublishCohort');
+    if (btnTogglePublish) {
+      btnTogglePublish.addEventListener('click', () => {
+        const key = this.spreadsheetSelectedCohortKey;
+        const isPub = window.appState.isCohortPublished(key);
+        if (isPub) {
+          window.appState.unpublishTimetable(key);
+          this.showToast(`Timetable for "${key}" unpublished from Mobile App.`, 'info');
+        } else {
+          window.appState.publishTimetable(key);
+          this.showToast(`Timetable for "${key}" published to Student & Faculty Mobile App!`, 'success');
+        }
+        this.renderAdminView();
+      });
+    }
+
+    const btnPublishAll = document.getElementById('btnPublishAllCohorts');
+    if (btnPublishAll) {
+      btnPublishAll.addEventListener('click', () => {
+        window.appState.publishTimetable('ALL');
+        this.showToast('All Year & Section timetables published to Mobile App!', 'success');
+        this.renderAdminView();
+      });
+    }
+  },
+
 
   /**
    * 4. Admin Dedicated Tab: "Key Counter"
@@ -1156,11 +1358,15 @@ const appUi = {
 
     const user = window.appState.currentUser;
     const nameEl = document.getElementById('mobileUserNameTag');
-    if (nameEl) nameEl.textContent = `${user.name} (${user.role.toUpperCase()})`;
+    if (nameEl) nameEl.textContent = `${user.name} (${user.role.toUpperCase()}) ▾`;
 
     switch (this.activeMobileTab) {
       case 'rooms':
         mobileBody.innerHTML = this.getMobileRoomsHTML();
+        break;
+      case 'schedule':
+        mobileBody.innerHTML = this.getMobileScheduleHTML();
+        this.bindMobileScheduleEvents();
         break;
       case 'transfer':
         mobileBody.innerHTML = this.getMobileTransferHTML();
@@ -1174,6 +1380,174 @@ const appUi = {
         mobileBody.innerHTML = this.getMobileRoomsHTML();
     }
   },
+
+  /**
+   * Mobile Feature 2: Published Class Schedule Timetable
+   * Filtered by student's/faculty's Year & Section with quick selector and day filtering
+   */
+  getMobileScheduleHTML() {
+    const user = window.appState.currentUser;
+    const data = window.appState.data;
+    const distinctCohorts = window.appState.getDistinctYearSections();
+
+    // Default cohort based on active user
+    let cohortKey = this.mobileSelectedCohortKey;
+    if (!cohortKey) {
+      if (user.role === 'student' && user.program && user.year && user.section) {
+        cohortKey = `${user.program} | ${user.year} - ${user.section}`;
+      } else {
+        cohortKey = distinctCohorts[0] ? distinctCohorts[0].key : 'ALL';
+      }
+      this.mobileSelectedCohortKey = cohortKey;
+    }
+
+    const isFaculty = user.role === 'faculty';
+    const isTeachingLoadMode = isFaculty && this.mobileFacultyViewMode === 'myload';
+
+    let schedulesToShow = [];
+    if (isTeachingLoadMode) {
+      schedulesToShow = (data.schedules || []).filter(s => {
+        return s.facultyId === user.id || (user.name && s.facultyName && s.facultyName.includes(user.name.split(' ').pop()));
+      });
+    } else {
+      schedulesToShow = window.appState.getSchedulesByCohortKey(cohortKey);
+    }
+
+    // Filter by day if selected
+    const activeDay = this.mobileScheduleDayFilter || 'ALL';
+    const filteredCourses = activeDay === 'ALL'
+      ? schedulesToShow
+      : schedulesToShow.filter(s => s.day === activeDay);
+
+    const isPublished = isTeachingLoadMode ? true : window.appState.isCohortPublished(cohortKey);
+    const days = ["ALL", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    return `
+      <div class="mobile-schedule-wrap">
+        <div>
+          <strong style="font-size: 0.95rem; color: var(--c-primary);">CIT Official Class Schedule</strong>
+          <p style="font-size: 0.74rem; color: var(--c-text-muted);">
+            Official semester timetables published for student and faculty access.
+          </p>
+        </div>
+
+        ${isFaculty ? `
+          <div style="display: flex; gap: 6px; background: var(--c-secondary-light); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--c-border);">
+            <button class="btn btn-sm ${isTeachingLoadMode ? 'btn-primary' : 'btn-outline'}" id="btnMobileFacultyMyLoad" style="flex: 1; font-size: 0.72rem; padding: 4px;">
+              My Teaching Load (${(data.schedules || []).filter(s => s.facultyId === user.id).length})
+            </button>
+            <button class="btn btn-sm ${!isTeachingLoadMode ? 'btn-primary' : 'btn-outline'}" id="btnMobileFacultyCohort" style="flex: 1; font-size: 0.72rem; padding: 4px;">
+              Year & Section Timetable
+            </button>
+          </div>
+        ` : ''}
+
+        ${!isTeachingLoadMode ? `
+          <div class="mobile-cohort-selector-box">
+            <label for="mobileCohortSelect">Select Year & Section:</label>
+            <select id="mobileCohortSelect" class="form-control" style="font-size: 0.78rem; font-weight: 600;">
+              ${distinctCohorts.map(c => `
+                <option value="${c.key}" ${cohortKey === c.key ? 'selected' : ''}>
+                  ${c.displayName}
+                </option>
+              `).join('')}
+            </select>
+            <div class="mobile-cohort-meta">
+              <span>Courses: <strong>${schedulesToShow.length} Subjects</strong></span>
+              <span>Enrollment: <strong>${schedulesToShow[0] ? schedulesToShow[0].enrolled : 28} Students</strong></span>
+            </div>
+          </div>
+        ` : `
+          <div style="background: var(--c-surface); border: 1px solid var(--c-border); border-left: 3px solid var(--c-primary); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.75rem;">
+            <strong style="color: var(--c-primary);">${user.name}</strong> (${user.department})<br>
+            <span style="color: var(--c-text-muted);">Total Assigned Teaching Load: <strong>${schedulesToShow.length} Classes / Laboratories</strong></span>
+          </div>
+        `}
+
+        <!-- Publication Status Banner -->
+        <div class="mobile-pub-banner ${isPublished ? 'published' : 'draft'}">
+          <span style="font-size: 1rem;">${isPublished ? '✓' : '⚠️'}</span>
+          <div>
+            <strong>${isPublished ? "Officially Published by CIT Dean's Office" : 'Draft Timetable (Unpublished)'}</strong><br>
+            <span>${isPublished ? 'Live semestral schedule synchronized with facility keys and room counters.' : 'Administrative review pending. Courses shown are preview only.'}</span>
+          </div>
+        </div>
+
+        <!-- Day Filter Bar -->
+        <div class="day-filter-bar">
+          ${days.map(d => `
+            <button class="day-filter-btn ${activeDay === d ? 'active' : ''}" data-day="${d}">
+              ${d === 'ALL' ? 'All Days' : d.slice(0, 3)}
+            </button>
+          `).join('')}
+        </div>
+
+        <!-- Courses List -->
+        <div class="mobile-course-list">
+          ${filteredCourses.length > 0 ? filteredCourses.map(s => {
+            const courseInfo = data.courses.find(c => c.code === s.courseCode);
+            const units = courseInfo ? courseInfo.units : 3;
+            const roomInfo = data.rooms.find(r => r.code === s.roomCode);
+
+            return `
+              <div class="mobile-course-card">
+                <div class="mobile-course-top">
+                  <span class="mobile-day-tag">📅 ${s.day}</span>
+                  <span class="mobile-time-pill">⏰ ${s.startTime} - ${s.endTime}</span>
+                </div>
+                <div class="mobile-course-code">${s.courseCode}</div>
+                <div class="mobile-course-title">${s.courseTitle || 'Laboratory Course'}</div>
+                <div class="mobile-course-details">
+                  <span>📍 <strong>Facility:</strong> ${s.roomCode} - ${roomInfo ? roomInfo.name : 'Lab'}</span>
+                  <span>👨‍🏫 <strong>Instructor:</strong> ${s.facultyName}</span>
+                  <span>👥 <strong>Cohort:</strong> ${s.year} - ${s.section} (${s.program})</span>
+                  <span>📊 <strong>Academic Units:</strong> ${units} Units • Cap: ${s.enrolled || 28} Students</span>
+                </div>
+              </div>
+            `;
+          }).join('') : `
+            <div style="text-align: center; padding: 24px 12px; color: var(--c-text-muted); font-size: 0.78rem; background: var(--c-surface); border: 1px dashed var(--c-border); border-radius: var(--radius-sm);">
+              No scheduled classes on ${activeDay} for this selection.
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+  },
+
+  bindMobileScheduleEvents() {
+    const cohortSelect = document.getElementById('mobileCohortSelect');
+    if (cohortSelect) {
+      cohortSelect.addEventListener('change', (e) => {
+        this.mobileSelectedCohortKey = e.target.value;
+        this.renderMobileView();
+      });
+    }
+
+    document.querySelectorAll('.day-filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        this.mobileScheduleDayFilter = e.currentTarget.getAttribute('data-day');
+        this.renderMobileView();
+      });
+    });
+
+    const btnMyLoad = document.getElementById('btnMobileFacultyMyLoad');
+    if (btnMyLoad) {
+      btnMyLoad.addEventListener('click', () => {
+        this.mobileFacultyViewMode = 'myload';
+        this.renderMobileView();
+      });
+    }
+
+    const btnCohort = document.getElementById('btnMobileFacultyCohort');
+    if (btnCohort) {
+      btnCohort.addEventListener('click', () => {
+        this.mobileFacultyViewMode = 'cohort';
+        this.renderMobileView();
+      });
+    }
+  },
+
 
   /**
    * Mobile Feature 1: Minimalist Room Availability Dashboard

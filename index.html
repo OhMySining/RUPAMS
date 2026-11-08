@@ -96,22 +96,26 @@
 
   <!-- ==========================================================================
        VIEW CONTAINER 2: MOBILE WEB APP (STUDENTS & FACULTY)
-       Strictly 3 Features:
-       1. Peer-to-Peer Return/Borrow Key Transfer (NFC + QR)
-       2. Submit Facility Problem Report (with picture upload)
-       3. Minimalist Rooms Availability Dashboard
+       Features:
+       1. Minimalist Rooms Availability Dashboard
+       2. Published Class Schedule Timetable (Per Year & Section)
+       3. Peer-to-Peer Return/Borrow Key Transfer (NFC + QR)
+       4. Submit Facility Problem Report (with picture upload)
        ========================================================================== -->
   <main id="mobileAppContainer" class="mobile-viewport-container hidden">
     <div class="mobile-card-shell">
       <div class="mobile-top-bar">
         <span class="mobile-title">CIT Mobile Portal</span>
-        <span class="mobile-user-tag" id="mobileUserNameTag">Juan Dela Cruz (Student)</span>
+        <span class="mobile-user-tag" id="mobileUserNameTag" title="Tap to switch user persona">Juan Dela Cruz (Student) ▾</span>
       </div>
 
-      <!-- Clean 3-Tab Bar -->
+      <!-- Clean 4-Tab Bar -->
       <nav class="mobile-tabs-nav">
         <button class="m-tab-btn active" data-tab="rooms">
           Rooms Status
+        </button>
+        <button class="m-tab-btn" data-tab="schedule">
+          Class Schedule
         </button>
         <button class="m-tab-btn" data-tab="transfer">
           Key Transfer
@@ -173,7 +177,7 @@
 
           <div style="padding: 10px; border: 1px solid var(--c-border); border-radius: var(--radius-sm); cursor: pointer;" onclick="appUi.selectUserPreset('student')">
             <strong style="color: var(--c-primary); font-size: 0.85rem;">Juan Dela Cruz</strong>
-            <div style="font-size: 0.74rem; color: var(--c-text-muted);">Student (3rd Year BSIT Electronics)</div>
+            <div style="font-size: 0.74rem; color: var(--c-text-muted);">Student (3rd Year BSIT Electronics - Section A)</div>
           </div>
         </div>
       </div>
