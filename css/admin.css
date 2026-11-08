@@ -189,6 +189,12 @@
   color: var(--c-green);
 }
 
+.constraint-alert.info {
+  background: var(--c-secondary-light);
+  border: 1px solid var(--c-border);
+  color: var(--c-secondary);
+}
+
 /* Tables */
 .table-wrapper {
   background: var(--c-surface);

@@ -15,8 +15,12 @@ const SchedulerEngine = {
   ],
 
   timeToMinutes(timeStr) {
-    if (!timeStr) return 0;
-    const [h, m] = timeStr.split(':').map(Number);
+    if (typeof timeStr !== 'string') return NaN;
+    const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(timeStr);
+    if (!match) return NaN;
+    const [, hours, minutes] = match;
+    const h = Number(hours);
+    const m = Number(minutes);
     return h * 60 + m;
   },
 
@@ -40,6 +44,12 @@ const SchedulerEngine = {
     const errors = [];
     const candidateRoom = rooms.find(r => r.code === candidate.roomCode);
     const candidateFaculty = facultyList.find(f => f.id === candidate.facultyId);
+
+    const startMinutes = this.timeToMinutes(candidate.startTime);
+    const endMinutes = this.timeToMinutes(candidate.endTime);
+    if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || startMinutes >= endMinutes) {
+      errors.push('Invalid Schedule Time: Choose a valid start time and an end time later than the start.');
+    }
 
     // 1. Capacity Constraint
     if (candidateRoom && candidate.enrolled && candidate.enrolled > candidateRoom.capacity) {

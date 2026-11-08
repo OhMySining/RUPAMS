@@ -306,6 +306,7 @@ const appUi = {
             <div class="form-group">
               <label class="form-label">Student Program</label>
               <select id="schProgramSelect" class="form-control" required>
+                <option value="" selected disabled>Select a program</option>
                 ${programs.map(p => `<option value="${p}">${p}</option>`).join('')}
               </select>
             </div>
@@ -315,6 +316,7 @@ const appUi = {
               <div class="form-group">
                 <label class="form-label">Year Level</label>
                 <select id="schYearSelect" class="form-control" required>
+                  <option value="" selected disabled>Select a year</option>
                   ${yearLevels.map(y => `<option value="${y}">${y}</option>`).join('')}
                 </select>
               </div>
@@ -322,6 +324,7 @@ const appUi = {
               <div class="form-group">
                 <label class="form-label">Section</label>
                 <select id="schSectionSelect" class="form-control" required>
+                  <option value="" selected disabled>Select a section</option>
                   ${sections.map(sec => `<option value="${sec}">${sec}</option>`).join('')}
                 </select>
               </div>
@@ -331,6 +334,7 @@ const appUi = {
             <div class="form-group">
               <label class="form-label">CIT Facility / Room</label>
               <select id="schRoomSelect" class="form-control" required>
+                <option value="" selected disabled>Select a room</option>
                 ${data.rooms.map(r => `<option value="${r.code}">${r.code} - ${r.name} (Cap: ${r.capacity})</option>`).join('')}
               </select>
             </div>
@@ -339,6 +343,7 @@ const appUi = {
             <div class="form-group">
               <label class="form-label">Subject / Course</label>
               <select id="schCourseSelect" class="form-control" required>
+                <option value="" selected disabled>Select a course</option>
                 ${data.courses.map(c => `<option value="${c.code}">${c.code} - ${c.title}</option>`).join('')}
               </select>
             </div>
@@ -347,6 +352,7 @@ const appUi = {
             <div class="form-group">
               <label class="form-label">Faculty Workload / Instructor</label>
               <select id="schFacultySelect" class="form-control" required>
+                <option value="" selected disabled>Select an instructor</option>
                 ${data.faculty.map(f => `<option value="${f.id}">${f.name} (${f.department})</option>`).join('')}
               </select>
             </div>
@@ -361,6 +367,7 @@ const appUi = {
             <div class="form-group">
               <label class="form-label">Day of Week</label>
               <select id="schDaySelect" class="form-control" required>
+                <option value="" selected disabled>Select a day</option>
                 ${window.SchedulerEngine.DAYS.map(d => `<option value="${d}">${d}</option>`).join('')}
               </select>
             </div>
@@ -369,11 +376,11 @@ const appUi = {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div class="form-group">
                 <label class="form-label">Start Time</label>
-                <input type="time" id="schStartTime" class="form-control" value="08:00" required>
+                <input type="time" id="schStartTime" class="form-control" required>
               </div>
               <div class="form-group">
                 <label class="form-label">End Time</label>
-                <input type="time" id="schEndTime" class="form-control" value="11:00" required>
+                <input type="time" id="schEndTime" class="form-control" required>
               </div>
             </div>
 
@@ -475,6 +482,7 @@ const appUi = {
   bindAdminScheduleEvents() {
     const validateLive = () => {
       const room = document.getElementById('schRoomSelect').value;
+      const courseCode = document.getElementById('schCourseSelect').value;
       const faculty = document.getElementById('schFacultySelect').value;
       const day = document.getElementById('schDaySelect').value;
       const start = document.getElementById('schStartTime').value;
@@ -496,15 +504,27 @@ const appUi = {
         enrolled: enrolled
       };
 
-      const result = window.SchedulerEngine.validateSchedule(candidate);
       const alertBox = document.getElementById('scheduleConstraintAlert');
       const submitBtn = document.getElementById('btnSaveSchedule');
 
+      if (![room, courseCode, faculty, day, start, end, program, year, section].every(Boolean)) {
+        if (alertBox) {
+          alertBox.innerHTML = `
+            <div class="constraint-alert info">
+              Select the course, cohort, room, instructor, day, and times to check for conflicts.
+            </div>
+          `;
+        }
+        if (submitBtn) submitBtn.disabled = true;
+        return;
+      }
+
+      const result = window.SchedulerEngine.validateSchedule(candidate);
       if (!result.isValid) {
         if (alertBox) {
           alertBox.innerHTML = `
             <div class="constraint-alert danger">
-              <strong>Constraint Overlap Detected:</strong><br>
+              <strong>Schedule Constraints Detected:</strong><br>
               ${result.errors.join('<br>')}
             </div>
           `;
