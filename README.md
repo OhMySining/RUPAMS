@@ -1,6 +1,6 @@
 # Room Utilization and Physical Access Management System (RUPAMS)
 
-**Undergraduate Thesis Project**  
+**System Analysis and Design Project**  
 **University of Rizal System (URS) Morong Campus — College of Industrial Technology (CIT)**
 
 A lightweight, purely web-based platform bridging institutional facility scheduling, physical key security, and laboratory incident management.
