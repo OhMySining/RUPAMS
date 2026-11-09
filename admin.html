@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RUPAMS - Admin Portal (PC) | URS Morong College of Industrial Technology</title>
+  
+  <!-- Favicon & Touch Icon -->
+  <link rel="icon" type="image/jpeg" href="assets/CITLogo.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="assets/CITLogo.jpg">
+  <link rel="apple-touch-icon" href="assets/CITLogo.jpg">
+
+  <!-- Minimalist Light Design Tokens -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <!-- ==========================================================================
+       TOP GLOBAL HEADER (Admin Web PC)
+       ========================================================================== -->
+  <header class="global-header">
+    <div class="brand-section">
+      <img src="assets/CITLogo.jpg" alt="CIT Logo" class="brand-logo-img">
+      <div class="brand-info">
+        <h1>RUPAMS <span style="font-size: 0.82rem; font-weight: 500; color: var(--c-text-muted);">(Admin Portal PC)</span></h1>
+        <span>University of Rizal System Morong • College of Industrial Technology</span>
+      </div>
+    </div>
+
+    <!-- Live Time (12-Hour Format with AM/PM) -->
+    <div class="header-center">
+      <span class="header-time-pill" id="liveClockTime">--:--:-- -- (PST)</span>
+    </div>
+
+    <!-- Right Controls: Admin Identity & Navigation -->
+    <div class="header-right">
+      <a href="mobile.html" target="_blank" class="btn btn-secondary btn-sm" title="Preview Student & Faculty Mobile Experience">
+        <span>📱</span>
+        <span>Preview Mobile App</span>
+      </a>
+
+      <div class="user-badge" id="userProfileTrigger" title="Active Admin Persona">
+        <div>
+          <strong id="headerUserName">Dr. Liezel Fernando</strong>
+          <small id="headerUserRole">(ADMIN)</small>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary btn-sm btn-logout-trigger" onclick="window.appState.logout()" title="Sign out of Admin Portal and return to Landing Page">
+        <span>🚪</span>
+        <span>Sign Out</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       ACCESS RESTRICTION OVERLAY (Guarantees Admin-Only Access)
+       ========================================================================== -->
+  <div id="accessRestrictionOverlay" class="access-restriction-screen hidden">
+    <div class="restriction-card">
+      <div class="restriction-icon">🔒</div>
+      <h2>Admin Portal Restricted</h2>
+      <p>
+        The PC Portal is restricted exclusively to authorized College Administrators, Dean's Office personnel, and Program Heads.
+      </p>
+      <div>
+        <span class="restriction-user-pill">
+          Current Account: <strong id="currentRestrictedRole">User</strong>
+        </span>
+      </div>
+      <div class="restriction-actions">
+        <a href="mobile.html" class="btn btn-primary">
+          <span>📱</span>
+          <span>Go to Faculty & Student Mobile Web App</span>
+        </a>
+        <button class="btn btn-secondary btn-logout-trigger" onclick="window.appState.logout()">
+          <span>🚪</span>
+          <span>Sign Out / Return to Landing Page</span>
+        </button>
+        <a href="index.html" class="btn btn-secondary" style="font-size: 0.76rem;">
+          Return to Portal Landing Page
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       ADMIN WEB PORTAL (WEB PC MAIN LAYOUT)
+       ========================================================================== -->
+  <main id="adminPortalContainer" class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="sidebar-menu">
+        <button class="nav-link active" data-tab="dashboard">
+          <span>📊</span>
+          <span>Room Status</span>
+        </button>
+
+        <button class="nav-link" data-tab="schedules">
+          <span>📝</span>
+          <span>Schedule Creator</span>
+        </button>
+
+        <button class="nav-link" data-tab="spreadsheet">
+          <span>📑</span>
+          <span>Spreadsheet Output</span>
+        </button>
+
+        <button class="nav-link" data-tab="keycounter">
+          <span>📟</span>
+          <span>Key Counter</span>
+        </button>
+
+        <button class="nav-link" data-tab="keylogs">
+          <span>🔑</span>
+          <span>Key Logs</span>
+        </button>
+
+        <button class="nav-link" data-tab="reports">
+          <span>⚠️</span>
+          <span>Problem Reports</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <strong>URS Morong Campus</strong><br>
+        College of Industrial Technology<br>
+        Access & Scheduling Intelligence
+      </div>
+    </aside>
+
+    <section class="admin-main" id="adminDynamicContent">
+      <!-- Injected dynamically via appUi.renderAdminView() -->
+    </section>
+  </main>
+
+  <!-- ==========================================================================
+       MODAL: FULL PHOTO INSPECTION & DETAILS
+       ========================================================================== -->
+  <div class="modal-overlay" id="genericDetailModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="genericModalTitle">Report Details</h3>
+        <button class="btn-close" onclick="appUi.closeModal('genericDetailModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="genericModalBody">
+        <!-- Dynamically injected -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="appUi.closeModal('genericDetailModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL: ADMIN ACCOUNT / PERSONA DETAILS
+       ========================================================================== -->
+  <div class="modal-overlay" id="userSwitcherModal">
+    <div class="modal-dialog" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3>Admin Profile</h3>
+        <button class="btn-close" onclick="appUi.closeModal('userSwitcherModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="padding: 12px; border: 1px solid var(--c-border); border-radius: var(--radius-sm); margin-bottom: 12px; background: var(--c-secondary-light);">
+          <strong style="color: var(--c-primary); font-size: 0.95rem;">Dr. Liezel Fernando</strong>
+          <div style="font-size: 0.78rem; color: var(--c-text-muted);">Role: Administrator (Dean's Office / Program Head)</div>
+          <div style="font-size: 0.75rem; color: var(--c-text-muted); margin-top: 4px;">Employee ID: ADM-001 • CIT Morong</div>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--c-text-muted);">
+          To switch to a Faculty or Student account, please sign out and sign in through the Mobile Web App.
+        </p>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-danger btn-sm btn-logout-trigger" onclick="window.appState.logout()">Sign Out</button>
+        <button class="btn btn-secondary btn-sm" onclick="appUi.closeModal('userSwitcherModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="js/audio.js"></script>
+  <script src="js/mockData.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/scheduler.js"></script>
+  <script src="js/keyManagement.js"></script>
+  <script src="js/qrNfcSim.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

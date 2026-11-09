@@ -370,3 +370,115 @@ body {
 .toast.toast-error { border-left-color: var(--c-red); }
 
 .hidden { display: none !important; }
+
+
+/* Brand Logo Image Support */
+.brand-logo-img {
+  height: 40px;
+  width: 40px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+.mobile-brand-logo-img {
+  height: 28px;
+  width: 28px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+/* Access Restriction Overlay (For Role Separation) */
+.access-restriction-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.restriction-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  max-width: 480px;
+  width: 100%;
+  padding: 32px 28px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--c-border);
+}
+
+.restriction-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.restriction-card h2 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--c-primary);
+  margin-bottom: 10px;
+}
+
+.restriction-card p {
+  font-size: 0.86rem;
+  color: var(--c-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.restriction-user-pill {
+  display: inline-block;
+  background: var(--c-secondary-light);
+  border: 1px solid var(--c-border);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: var(--c-primary);
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.restriction-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+
+/* Enhanced CIT Logo Styling */
+.brand-logo-img {
+  height: 44px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  object-fit: contain !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  padding: 2px !important;
+  border: 1px solid var(--c-border) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  display: block !important;
+}
+
+.mobile-brand-logo-img {
+  height: 34px !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  object-fit: contain !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  padding: 2px !important;
+  border: 1px solid var(--c-border) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  display: block !important;
+}

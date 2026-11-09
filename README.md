@@ -17,101 +17,49 @@ The application strictly focuses on **3 clean, cohesive colors** without flashy 
 
 ---
 
-## 📱 1. Mobile Web App (Students & Faculty)
+## 📂 Multi-Page Architecture & Access Control
 
-The mobile view is strictly limited to the **3 essential features** needed on campus:
+The application is structured into dedicated, role-separated HTML entrypoints:
 
-1. **Current Rooms Dashboard (with Key Status):**
-   * A clean, uncluttered, focused view showing:
-     * Room code & facility name.
-     * Room Status: *Available* or *Occupied*.
-     * **Key Status:** *In Cabinet (Dean's Office)* (🟢) or *Borrowed* (🔴) with current holder.
-     * What class and faculty is currently occupying the facility.
-2. **Key Handover / Transfer (Borrow, Return, Transfer):**
-   * Students or faculty can borrow, return, or transfer keys between peers.
-   * **2-Factor Authorization Workflow:**
-     * **Step 1 (Physical Key NFC):** Shows the animated **NFC Scanner** visual sensor to tap and verify the physical key card UID.
-     * **Step 2 (Personal QR):** Shows the live **Camera / QR Scanner** to align and verify the recipient's personal identity QR code.
-     * **Step 3 (Authorize):** Summary review and completion with instant custody update.
-   * Also includes a "My Personal Identity QR" screen so students/faculty can present their QR code to peers or at the Dean's counter.
-3. **Facility Problem & Incident Reporting:**
-   * Students or faculty can report issues encountered in academic rooms or workshops (e.g., equipment damage, electrical hazards, AC leaks, missing tools).
-   * Users write a detailed problem description and **upload a photo** directly (via camera or photo file picker) with instant preview.
-   * Immediately dispatches to the Admin Desk with timestamp, reporter credentials, and image evidence.
+1. **`index.html` — Portal Landing & Authentication Page:**
+   * **PC Layout:** Left 65% width features the URS Morong campus background (`assets/urs-morong-campus-02-place.jfif`) and institutional pillars, while the right 35% contains the modern Sign In & Registration forms.
+   * **Mobile Layout:** Elegant, simple centered card over the campus backdrop.
+   * **Authentication:**
+     * Admin Sign In and Registration (with administrative security key verification).
+     * Faculty (Professors) Sign In and Registration (department workload assignments).
+     * Students Sign In and Registration (Year and Section assignments).
+     * **1-Click Quick Demo Sign In:** Instant evaluation logins for Dr. Liezel Fernando (Admin), Engr. Maria Elena Bautista (Faculty), and Juan Dela Cruz (Student).
+   * **Automatic Redirection:** Automatically routes Admins to `admin.html`, and Faculty/Students to `mobile.html`.
 
----
+2. **`admin.html` — Admin Portal (Web PC):**
+   * **Strict Access Control:** Restricted exclusively to administrators, department heads, and Dean's Office personnel.
+   * If an unauthorized account (faculty, student, or unauthenticated) attempts to access, an access restriction overlay blocks viewing and redirects to the mobile portal.
+   * Features:
+     1. **Real-Time Facility & Key Status Dashboard:** Room availability & physical key custody.
+     2. **Manual Schedule Creator:** Real-time collision checking across 84 Year & Sections.
+     3. **Automated Spreadsheet Output Module:** Export semestral timetables to CSV/Excel or print official matrix.
+     4. **Key Counter Terminal:** Dean's Office station for checking out/in physical keys.
+     5. **Key Logs Ledger:** Immutable RFID/QR key transactions history.
+     6. **Problem Reports Desk:** Review facility issues and full-resolution photo evidence.
 
-## 🖥️ 2. Admin Web Portal (Web PC)
-
-Designed for program heads, department chairs, the dean, and administrative secretaries:
-
-1. **Dedicated "Key Counter" Tab (Dean's Office Station):**
-   * A dedicated counter terminal where students and faculty can log key check-outs, returns, or custody transfers in the Dean's Office.
-   * Follows the exact same 3-step verification workflow as the mobile app:
-     * Choose Action: **Borrowed** (from cabinet to student/faculty), **Returned** (back to cabinet), or **Transfered** (custody transfer logged at counter).
-     * **Step 1:** Key NFC Scanner to scan/verify key tag.
-     * **Step 2:** Camera / QR Scanner to scan personnel QR badge.
-     * **Step 3:** Authorize & save directly into the Key Logs ledger.
-   * Displays a live **Dean's Cabinet Status Board** showing all 10 cabinet slots and who holds each key.
-2. **Manual Schedule Creation with Program, Year & Section Breakdown:**
-   * *Not automated generation:* Manually input by administrators based on:
-     * Student Program (`BSIT - Automotive`, `Electrical`, `Electronics`, `Computer`, `Mechanical`, `Drafting`, `Food Service`)
-     * Year Level (`1st Year`, `2nd Year`, `3rd Year`, `4th Year`)
-     * Section (`Section A`, `Section B`, `Section C`)
-     * CIT Facility / Room
-     * Faculty Workload
-     * Course Curriculum Subject
-     * Total Section Occupancy
-   * **Real-Time Constraint Checking:** Cross-references database constraints to actively prevent:
-     * Room double-bookings / overlapping times.
-     * Faculty assignment clashes.
-     * Student cohort / section clashes.
-     * Room capacity deficiencies.
-   * **Cohort Filtering:** Filter committed schedules on the right panel by **Program**, **Year Level**, and **Section** to view any specific cohort's timetable.
-3. **Automated Spreadsheet Output Module:**
-   * Replaces manual spreadsheet plotting in third-party software like Microsoft Excel.
-   * Automatically compiles all manually entered schedules into an institutional semestral timetable spreadsheet.
-   * **1-Click Download Spreadsheet (.CSV / Excel):** Exports an instant `.csv` file compatible with Microsoft Excel and Google Sheets.
-   * **1-Click Print Spreadsheet Matrix:** Clean official print layout.
-4. **Key Logs Ledger:**
-   * Official immutable audit record of all key borrowings, returns, and transfers.
-   * Action types strictly: **Borrowed**, **Returned**, **Transfered**.
-   * Shows whether the transaction occurred at the **Dean's Office Counter** or via the **Mobile App**, with verified NFC UID and Personal QR token.
-5. **Facility Problem Reports Desk:**
-   * Review all problem reports submitted from mobile devices.
-   * View full-resolution uploaded photo evidence and manage resolution statuses (*Under Review*, *In Progress*, *Resolved*).
-6. **Real-Time Facility & Key Status Dashboard:**
-   * Complete overview of campus facilities, live class occupancy, and explicit physical key custody status (*In Cabinet* vs *Borrowed*).
+3. **`mobile.html` — Mobile Web App (Students & Faculty):**
+   * **Role-Tailored Access:** Built specifically for Faculty and Students on smartphones or desktop viewports.
+   * Features:
+     1. **Rooms Availability Dashboard:** Real-time room status and key holder status.
+     2. **Class Schedule Timetable:** Filtered by student's/faculty's **Year and Section** with day-by-day tabs.
+     3. **Peer-to-Peer Key Transfer:** 2-Factor NFC & QR key handover between professors and student class representatives.
+     4. **Facility Problem Report:** Submit maintenance and safety incident reports with camera/photo upload.
 
 ---
 
-## 📂 Project Structure
+## 🖼️ Assets & Icons
 
-```
-RUPAMS/
-├── index.html              # Main single-page application entry point
-├── README.md               # Complete thesis documentation & testing guide
-├── .gitignore              # Git ignore rules
-├── css/
-│   ├── main.css            # Minimalist 3-color base tokens, layout, modals, toast
-│   ├── admin.css           # Admin scheduling panel, Key Counter terminal, reports desk
-│   └── mobile.css          # Mobile 3-feature workflow, NFC wave scanner, camera viewport
-└── js/
-    ├── app.js              # Application controller & view orchestrator
-    ├── state.js            # Reactive state management with LocalStorage persistence
-    ├── mockData.js         # Initial URS Morong CIT baseline data (rooms, keys, schedules)
-    ├── scheduler.js        # Manual schedule validator & constraint enforcement
-    ├── keyManagement.js    # Key transaction processor (Borrowed, Returned, Transfered)
-    ├── qrNfcSim.js         # Camera QR scanner & vector SVG QR code generator
-    └── audio.js            # Web Audio API sound synthesizer
-```
+* **Favicon & Touch Icon:** `assets/CITLogo.jpg` is used as the browser favicon and mobile web app home screen icon across all pages.
+* **Header Branding:** CIT Logo (`assets/CITLogo.jpg`) is prominently displayed in the upper-left of every header with automatic fallback to the CIT badge if the image is loading.
+* **Campus Backdrop:** `assets/urs-morong-campus-02-place.jfif` powers the 65% PC hero panel and mobile frosted landing background.
 
 ---
 
-## 🚀 How to Run
+## 📑 Nomenclature Update
 
-1. **Direct Browser Launch (Zero Install):**
-   * Double-click [index.html](file:///c:/*/OneDrive/Desktop/RUPAMS/index.html) to open in Chrome, Edge, or Firefox.
-2. **Switching Views & Personas:**
-   * Top bar toggle: Switch between `Admin Portal (PC)` and `Mobile Web App`.
-   * Click the user name in the top right to switch between **Dr. Liezel Fernando (Admin)**, **Engr. Maria Elena Bautista (Faculty)**, and **Juan Dela Cruz (Student)**.
+* **Year and Section:** All previous references to "cohorts" have been replaced across the entire database, user interface, scheduling validator, spreadsheet generator, and mobile timetable with the standard academic designation: **"Year and Section"** (e.g. `3rd Year - Section A (BSIT - Electronics Technology)`).

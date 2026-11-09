@@ -1,8 +1,8 @@
-﻿/**
+/**
  * RUPAMS - Complete Institutional Seed Data
  * University of Rizal System Morong Campus
  * College of Industrial Technology (CIT)
- * Complete Master Database: 7 Programs * 4 Years * 3 Sections = 84 Cohorts
+ * Complete Master Database: 7 Programs * 4 Years * 3 Sections = 84 Distinct Year & Sections
  * 336 Officially Scheduled Courses (4 Non-Conflicting Courses per Section)
  */
 
