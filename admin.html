@@ -35,6 +35,35 @@
 
     <!-- Right Controls: Admin Identity & Navigation -->
     <div class="header-right">
+      <!-- Admin Notifications Bell & Dropdown -->
+      <div class="notif-wrapper" id="adminNotifWrapper">
+        <button class="notif-bell-btn" id="adminNotifBellBtn" title="Alerts & Incident Tickets" onclick="appUi.toggleAdminNotifDropdown(event)">
+          <span class="notif-bell-icon">🔔</span>
+          <span class="notif-badge hidden" id="adminNotifBadge">0</span>
+        </button>
+        
+        <!-- Admin Notification Dropdown Panel -->
+        <div class="notif-dropdown hidden" id="adminNotifDropdown">
+          <div class="notif-dropdown-header">
+            <div>
+              <strong style="font-size: 0.88rem; color: var(--c-primary);">Dean's Office Alerts & Tickets</strong>
+              <div style="font-size: 0.7rem; color: var(--c-text-muted);">Unreturned keys & problem tickets</div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-xs btn-outline" style="font-size: 0.68rem; padding: 3px 6px;" onclick="appUi.triggerCurfewAudit()" title="Audit keys for 7:00 PM curfew compliance">
+                ⏱️ Test 7PM Alert
+              </button>
+              <button class="btn btn-xs btn-secondary" style="font-size: 0.68rem; padding: 3px 6px;" onclick="appUi.markAllNotifsRead('admin')">
+                Mark Read
+              </button>
+            </div>
+          </div>
+          <div class="notif-dropdown-body" id="adminNotifList">
+            <!-- Dynamically injected -->
+          </div>
+        </div>
+      </div>
+
       <a href="mobile.html" target="_blank" class="btn btn-secondary btn-sm" title="Preview Student & Faculty Mobile Experience">
         <span>📱</span>
         <span>Preview Mobile App</span>
