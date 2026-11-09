@@ -14,6 +14,7 @@ class AppState {
     this.mobileViewFrame = false;
     this.data = this.loadState();
     this.currentUser = this.loadCurrentUser();
+    this.initNotifications();
   }
 
   loadState() {
@@ -24,6 +25,7 @@ class AppState {
         if (parsed.rooms && parsed.schedules && parsed.schedules.length >= 300 && parsed.reports && parsed.publication) {
           if (!parsed.keyLogs) parsed.keyLogs = parsed.transfers || [];
           if (!parsed.registeredUsers) parsed.registeredUsers = [];
+          if (!parsed.notifications) parsed.notifications = [];
           return parsed;
         }
       }
@@ -32,6 +34,7 @@ class AppState {
     }
     const initial = JSON.parse(JSON.stringify(window.INITIAL_MOCK_DATA));
     if (!initial.registeredUsers) initial.registeredUsers = [];
+    if (!initial.notifications) initial.notifications = [];
     this.persist(initial);
     return initial;
   }
@@ -420,6 +423,14 @@ class AppState {
         room.keyHolder = "In Cabinet (Dean's Office)";
         room.occupancy = null;
       }
+      // Mark active overdue key alerts for this room as resolved/read
+      if (this.data.notifications) {
+        this.data.notifications.forEach(n => {
+          if (n.type === 'key_unreturned_alert' && n.roomCode === logEntry.roomCode) {
+            n.read = true;
+          }
+        });
+      }
     } else {
       // Borrowed or Transfered
       if (key) {
@@ -458,6 +469,23 @@ class AppState {
       ...reportData
     };
     this.data.reports.unshift(newReport);
+
+    // Automatically generate notification for Admin Portal PC
+    const roomIdentifier = newReport.facility || newReport.roomCode || "CIT Facility";
+    this.addNotification({
+      id: `NOTIF-REP-${newReport.reportId}`,
+      dedupKey: `report_${newReport.reportId}`,
+      type: 'problem_report',
+      targetRole: 'admin',
+      recipientName: 'Administrator',
+      title: `⚠️ Problem Ticket: ${roomIdentifier}`,
+      message: `${newReport.reporterName || 'Mobile User'} (${newReport.reporterRole || 'Student'}) filed ticket: "${newReport.category || newReport.issueType || 'Facility Issue'}" - ${(newReport.description || '').slice(0, 90)}...`,
+      roomCode: roomIdentifier,
+      relatedReportId: newReport.reportId,
+      timestamp: newReport.timestamp,
+      urgent: false
+    });
+
     this.save();
     this.emit('reportAdded', newReport);
     return newReport;
@@ -470,6 +498,213 @@ class AppState {
       this.save();
       this.emit('reportUpdated', report);
     }
+  }
+
+  // ==========================================================================
+  // NOTIFICATION & 7:00 PM CURFEW ALERT SYSTEM
+  // ==========================================================================
+
+  initNotifications() {
+    if (!this.data.notifications) {
+      this.data.notifications = [];
+    }
+
+    // Seed default notifications for initial reports if empty
+    if (this.data.notifications.length === 0 && this.data.reports && this.data.reports.length > 0) {
+      this.data.reports.slice(0, 3).forEach(r => {
+        this.data.notifications.push({
+          id: `NOTIF-INIT-REP-${r.reportId}`,
+          dedupKey: `report_${r.reportId}`,
+          type: 'problem_report',
+          targetRole: 'admin',
+          recipientName: 'Administrator',
+          title: `⚠️ Problem Ticket: ${r.roomCode}`,
+          message: `${r.reporterName} (${r.reporterRole}) reported: "${r.category}" - ${(r.description || '').slice(0, 80)}...`,
+          roomCode: r.roomCode,
+          relatedReportId: r.reportId,
+          timestamp: r.timestamp || new Date().toISOString(),
+          read: false,
+          urgent: false
+        });
+      });
+    }
+
+    // Check if 7:00 PM curfew alerts apply
+    this.checkCurfewKeyAlerts(false);
+  }
+
+  addNotification(notif) {
+    if (!this.data.notifications) this.data.notifications = [];
+
+    // Avoid duplicate if dedupKey matches
+    if (notif.dedupKey) {
+      const exists = this.data.notifications.some(n => n.dedupKey === notif.dedupKey);
+      if (exists) return null;
+    }
+
+    const record = {
+      id: notif.id || `NOTIF-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      timestamp: notif.timestamp || new Date().toISOString(),
+      read: !!notif.read,
+      targetRole: notif.targetRole || 'all', // 'admin', 'user', 'all'
+      recipientName: notif.recipientName || null,
+      recipientId: notif.recipientId || null,
+      type: notif.type || 'info', // 'key_unreturned_alert', 'problem_report', 'general'
+      title: notif.title || 'Notification',
+      message: notif.message || '',
+      roomCode: notif.roomCode || null,
+      keyId: notif.keyId || null,
+      currentHolder: notif.currentHolder || null,
+      relatedReportId: notif.relatedReportId || null,
+      urgent: !!notif.urgent,
+      dedupKey: notif.dedupKey || null
+    };
+
+    this.data.notifications.unshift(record);
+    this.save();
+    this.emit('notificationAdded', record);
+    return record;
+  }
+
+  getNotificationsForUser(user = null) {
+    const activeUser = user || this.getCurrentUser();
+    if (!this.data.notifications) this.data.notifications = [];
+
+    if (!activeUser) {
+      return this.data.notifications;
+    }
+
+    const isAdmin = activeUser.role === 'admin';
+    const userName = (activeUser.name || '').trim().toLowerCase();
+    const userId = (activeUser.id || '').trim().toLowerCase();
+
+    return this.data.notifications.filter(n => {
+      if (isAdmin) {
+        return n.targetRole === 'admin' || n.targetRole === 'all';
+      } else {
+        // Faculty or Student
+        if (n.targetRole === 'admin') return false;
+        if (n.targetRole === 'all') return true;
+        if (n.recipientId && n.recipientId.trim().toLowerCase() === userId) return true;
+        if (n.recipientName) {
+          const recLower = n.recipientName.trim().toLowerCase();
+          if (userName.includes(recLower) || recLower.includes(userName)) return true;
+        }
+        // If it is a key unreturned alert, check if currentHolder matches activeUser
+        if (n.type === 'key_unreturned_alert' && n.currentHolder) {
+          const holderLower = n.currentHolder.toLowerCase();
+          const firstWord = userName.split(' ')[0];
+          if (holderLower.includes(userName) || (firstWord && holderLower.includes(firstWord))) {
+            return true;
+          }
+        }
+        return false;
+      }
+    });
+  }
+
+  getUnreadNotificationCount(user = null) {
+    const notifs = this.getNotificationsForUser(user);
+    return notifs.filter(n => !n.read).length;
+  }
+
+  markNotificationAsRead(notifId) {
+    if (!this.data.notifications) return;
+    const notif = this.data.notifications.find(n => n.id === notifId);
+    if (notif) {
+      notif.read = true;
+      this.save();
+      this.emit('notificationsUpdated', this.data.notifications);
+    }
+  }
+
+  markAllNotificationsAsRead(roleContext = 'admin') {
+    const activeUser = this.getCurrentUser();
+    const userNotifs = this.getNotificationsForUser(activeUser);
+    userNotifs.forEach(n => {
+      n.read = true;
+    });
+    this.save();
+    this.emit('notificationsUpdated', this.data.notifications);
+  }
+
+  /**
+   * 7:00 PM Key Curfew Audit:
+   * When it turns 7:00 PM (19:00), or when simulation runs:
+   * Any key that is still not returned (status is 'Borrowed')
+   * triggers notifications for both the current holder and the Dean's Office Admin.
+   */
+  checkCurfewKeyAlerts(forceTrigger = false) {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const isPastCurfew = forceTrigger || currentHour >= 19; // 19:00 = 7:00 PM
+
+    if (!isPastCurfew) return [];
+
+    const rooms = this.data.rooms || [];
+    const dateStr = now.toISOString().slice(0, 10);
+    const generatedAlerts = [];
+
+    rooms.forEach(r => {
+      const isBorrowed = r.keyStatus === 'Borrowed' || r.status === 'occupied';
+      if (isBorrowed) {
+        const holder = r.keyHolder || "Unassigned Custodian";
+        const keyId = `KEY-${r.code}`;
+        const dedupBase = `curfew_${r.code}_${dateStr}`;
+
+        // 1. Notify current key holder (Student / Faculty)
+        const userAlert = this.addNotification({
+          id: `NOTIF-USER-${r.code}-${Date.now()}`,
+          dedupKey: `${dedupBase}_user`,
+          type: 'key_unreturned_alert',
+          targetRole: 'user',
+          recipientName: holder,
+          title: `⚠️ 7:00 PM Curfew Alert: Unreturned Key (${r.code})`,
+          message: `Campus safety protocol requires physical keys returned to Dean's Office by 7:00 PM. You are currently logged as custodian for facility ${r.code} (${r.name}). Please surrender the physical key immediately or perform an authorized handover.`,
+          roomCode: r.code,
+          keyId: keyId,
+          currentHolder: holder,
+          urgent: true
+        });
+
+        // 2. Notify Admin Portal PC
+        const adminAlert = this.addNotification({
+          id: `NOTIF-ADMIN-${r.code}-${Date.now()}`,
+          dedupKey: `${dedupBase}_admin`,
+          type: 'key_unreturned_alert',
+          targetRole: 'admin',
+          recipientName: 'Administrator',
+          title: `🚨 Unreturned Key Past 7:00 PM: ${r.code}`,
+          message: `Physical key for ${r.code} (${r.name}) has not been returned to the Dean's Office cabinet as of 7:00 PM. Current Custodian: ${holder}.`,
+          roomCode: r.code,
+          keyId: keyId,
+          currentHolder: holder,
+          urgent: true
+        });
+
+        if (userAlert) generatedAlerts.push(userAlert);
+        if (adminAlert) generatedAlerts.push(adminAlert);
+      }
+    });
+
+    if (generatedAlerts.length > 0 && window.SoundManager && window.SoundManager.playOverdueAlarm) {
+      window.SoundManager.playOverdueAlarm();
+    }
+
+    return generatedAlerts;
+  }
+
+  // Room schedule session status forwarding
+  getRoomSessionInfo(roomCode, refDate = null) {
+    if (window.SchedulerEngine && window.SchedulerEngine.getRoomSessionInfo) {
+      return window.SchedulerEngine.getRoomSessionInfo(roomCode, refDate);
+    }
+    return {
+      status: 'vacant',
+      isOngoing: false,
+      hasSession: false,
+      text: 'No class currently occupying facility.'
+    };
   }
 
   /**

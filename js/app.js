@@ -1,4 +1,4 @@
-﻿/**
+/**
  * RUPAMS - Main Application Controller & View Orchestrator
  * University of Rizal System Morong Campus - College of Industrial Technology
  * Minimalist Light Edition
@@ -38,17 +38,28 @@ const appUi = {
     this.setupEventListeners();
     this.startLiveClock();
     this.render();
+    this.updateNotifBadges();
 
     // Listen to state events
-    window.appState.on('stateChanged', () => this.render());
-    window.appState.on('userChanged', () => this.render());
+    window.appState.on('stateChanged', () => {
+      this.render();
+      this.updateNotifBadges();
+    });
+    window.appState.on('userChanged', () => {
+      this.render();
+      this.updateNotifBadges();
+    });
     window.appState.on('viewModeChanged', () => this.render());
     window.appState.on('publicationChanged', () => this.render());
+    window.appState.on('notificationsUpdated', () => this.updateNotifBadges());
+    window.appState.on('notificationAdded', () => this.updateNotifBadges());
     window.appState.on('keyLogAdded', (log) => {
       this.showToast(`[${log.actionType}] Key for ${log.roomCode} logged (${log.loggedLocation}).`, 'success');
+      this.updateNotifBadges();
     });
     window.appState.on('reportAdded', (r) => {
       this.showToast(`Problem report submitted for ${r.roomCode}.`, 'success');
+      this.updateNotifBadges();
     });
   },
 
@@ -75,6 +86,20 @@ const appUi = {
         e.preventDefault();
         window.appState.logout();
       });
+    });
+
+    // Outside click handler to close notification dropdowns
+    document.addEventListener('click', (e) => {
+      const adminWrapper = document.getElementById('adminNotifWrapper');
+      const mobileWrapper = document.getElementById('mobileNotifWrapper');
+      if (adminWrapper && !adminWrapper.contains(e.target)) {
+        const dd = document.getElementById('adminNotifDropdown');
+        if (dd) dd.classList.add('hidden');
+      }
+      if (mobileWrapper && !mobileWrapper.contains(e.target)) {
+        const dd = document.getElementById('mobileNotifDropdown');
+        if (dd) dd.classList.add('hidden');
+      }
     });
 
     // Role switcher modal click (desktop header and mobile topbar)
@@ -105,6 +130,7 @@ const appUi = {
   },
 
   startLiveClock() {
+    let tickCount = 0;
     const update = () => {
       const now = new Date();
       const clockEl = document.getElementById('liveClockTime');
@@ -115,6 +141,12 @@ const appUi = {
           second: '2-digit',
           hour12: true
         }) + ' (PST)';
+      }
+      tickCount++;
+      // Audit for 7:00 PM curfew every 10 seconds or when crossing hour
+      if (tickCount % 10 === 0 && window.appState) {
+        window.appState.checkCurfewKeyAlerts(false);
+        this.updateNotifBadges();
       }
     };
     update();
@@ -292,15 +324,32 @@ const appUi = {
 
       <div class="room-status-grid">
         ${rooms.map(r => {
-          const isOcc = r.status === 'occupied';
+          const sess = window.appState.getRoomSessionInfo(r.code);
+          const isOcc = r.status === 'occupied' || sess.isOngoing;
           const isKeyBorrowed = r.keyStatus === 'Borrowed';
           const keyHolder = r.keyHolder || (isKeyBorrowed ? "In Custody" : "In Cabinet (Dean's Office)");
+
+          let badgeText = r.status;
+          let badgeClass = r.status;
+          if (sess.isOngoing) {
+            badgeText = 'In Session';
+            badgeClass = 'occupied';
+          } else if (r.status === 'occupied') {
+            badgeText = 'Occupied';
+            badgeClass = 'occupied';
+          } else if (sess.status === 'upcoming_today') {
+            badgeText = 'Available (Class Today)';
+            badgeClass = 'available';
+          } else {
+            badgeText = 'Available';
+            badgeClass = 'available';
+          }
 
           return `
             <div class="room-status-card">
               <div class="room-card-head">
                 <span class="room-card-code">${r.code}</span>
-                <span class="badge-status ${r.status}">${r.status}</span>
+                <span class="badge-status ${badgeClass}">${badgeText}</span>
               </div>
               <div class="room-card-body">
                 <div>${r.name}</div>
@@ -318,9 +367,17 @@ const appUi = {
                 Holder: <strong>${keyHolder}</strong>
               </div>
 
-              <!-- Occupancy Info -->
-              <div class="room-occupancy-info ${isOcc ? '' : 'vacant'}">
-                ${isOcc && r.occupancy ? `
+              <!-- Occupancy Info based on real-time Schedule / Timetable Data -->
+              <div class="room-occupancy-info ${isOcc ? 'occupied' : 'vacant'}">
+                ${sess.hasSession ? `
+                  <div style="font-size: 0.75rem; font-weight: 700; color: ${sess.isOngoing ? 'var(--c-red)' : 'var(--c-primary)'}; margin-bottom: 2px;">
+                    ${sess.isOngoing ? '🟢 Class Currently in Session:' : sess.status === 'upcoming_today' ? '🕒 Expected Session Today:' : '📅 Next Scheduled Session:'}
+                  </div>
+                  <strong>Course:</strong> ${sess.headline}<br>
+                  <strong>Faculty:</strong> ${sess.faculty}<br>
+                  <strong>Section:</strong> ${sess.section}<br>
+                  <strong>Schedule:</strong> ${sess.timeStr}
+                ` : (isOcc && r.occupancy) ? `
                   <strong>Class:</strong> ${r.occupancy.class}<br>
                   <strong>Faculty / Occupant:</strong> ${r.occupancy.faculty}<br>
                   <strong>Time:</strong> ${r.occupancy.time}
@@ -548,71 +605,130 @@ const appUi = {
 
   bindAdminScheduleEvents() {
     const validateLive = () => {
-      const room = document.getElementById('schRoomSelect').value;
-      const courseCode = document.getElementById('schCourseSelect').value;
-      const faculty = document.getElementById('schFacultySelect').value;
-      const day = document.getElementById('schDaySelect').value;
-      const start = document.getElementById('schStartTime').value;
-      const end = document.getElementById('schEndTime').value;
-      const program = document.getElementById('schProgramSelect').value;
-      const year = document.getElementById('schYearSelect').value;
-      const section = document.getElementById('schSectionSelect').value;
-      const enrolled = Number(document.getElementById('schEnrollmentInput').value) || 30;
+      const room = document.getElementById('schRoomSelect') ? document.getElementById('schRoomSelect').value : '';
+      const courseCode = document.getElementById('schCourseSelect') ? document.getElementById('schCourseSelect').value : '';
+      const faculty = document.getElementById('schFacultySelect') ? document.getElementById('schFacultySelect').value : '';
+      const day = document.getElementById('schDaySelect') ? document.getElementById('schDaySelect').value : '';
+      const start = document.getElementById('schStartTime') ? document.getElementById('schStartTime').value : '';
+      const end = document.getElementById('schEndTime') ? document.getElementById('schEndTime').value : '';
+      const program = document.getElementById('schProgramSelect') ? document.getElementById('schProgramSelect').value : '';
+      const year = document.getElementById('schYearSelect') ? document.getElementById('schYearSelect').value : '';
+      const section = document.getElementById('schSectionSelect') ? document.getElementById('schSectionSelect').value : '';
+      const enrolled = Number(document.getElementById('schEnrollmentInput') ? document.getElementById('schEnrollmentInput').value : 30) || 30;
+
+      const facultyObj = window.appState.data.faculty.find(f => f.id === faculty);
 
       const candidate = {
         roomCode: room,
         facultyId: faculty,
+        facultyName: facultyObj ? facultyObj.name : null,
         day: day,
         startTime: start,
         endTime: end,
         program: program,
         year: year,
         section: section,
+        courseCode: courseCode,
         enrolled: enrolled
       };
 
       const alertBox = document.getElementById('scheduleConstraintAlert');
       const submitBtn = document.getElementById('btnSaveSchedule');
 
-      if (![room, courseCode, faculty, day, start, end, program, year, section].every(Boolean)) {
-        if (alertBox) {
-          alertBox.innerHTML = `
-            <div class="constraint-alert info">
-              Select the course, year & section, room, instructor, day, and times to check for conflicts.
-            </div>
-          `;
-        }
-        if (submitBtn) submitBtn.disabled = true;
-        return;
-      }
+      // Clear previous invalid field highlights
+      ['schProgramSelect', 'schYearSelect', 'schSectionSelect', 'schRoomSelect', 'schCourseSelect', 'schFacultySelect', 'schDaySelect', 'schStartTime', 'schEndTime', 'schEnrollmentInput'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('is-invalid');
+      });
 
+      // Run real-time incremental validation
       const result = window.SchedulerEngine.validateSchedule(candidate);
+
+      // Real-time conflict detected
       if (!result.isValid) {
         if (alertBox) {
           alertBox.innerHTML = `
             <div class="constraint-alert danger">
-              <strong>Schedule Constraints Detected:</strong><br>
-              ${result.errors.join('<br>')}
+              <strong style="display: flex; align-items: center; gap: 6px;">
+                <span>⚠️</span>
+                <span>Schedule Conflict Detected (${result.errors.length}):</span>
+              </strong>
+              <ul style="margin: 6px 0 0 18px; padding: 0;">
+                ${result.errors.map(err => `<li>${err}</li>`).join('')}
+              </ul>
             </div>
           `;
         }
+
+        // Highlight conflicting input fields
+        const inputMap = {
+          time: ['schStartTime', 'schEndTime'],
+          capacity: ['schEnrollmentInput', 'schRoomSelect'],
+          room: ['schRoomSelect', 'schDaySelect', 'schStartTime', 'schEndTime'],
+          faculty: ['schFacultySelect', 'schDaySelect', 'schStartTime', 'schEndTime'],
+          section: ['schProgramSelect', 'schYearSelect', 'schSectionSelect', 'schDaySelect', 'schStartTime', 'schEndTime']
+        };
+
+        if (result.conflictTypes) {
+          Object.keys(result.conflictTypes).forEach(typeKey => {
+            if (result.conflictTypes[typeKey] && inputMap[typeKey]) {
+              inputMap[typeKey].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('is-invalid');
+              });
+            }
+          });
+        }
+
         if (submitBtn) submitBtn.disabled = true;
-      } else {
+        return;
+      }
+
+      // Check if all 9 required fields are chosen
+      const allFilled = [room, courseCode, faculty, day, start, end, program, year, section].every(Boolean);
+
+      if (allFilled) {
         if (alertBox) {
           alertBox.innerHTML = `
             <div class="constraint-alert success">
-              <strong>Constraint Check: Clear</strong><br>
-              No room, faculty, or section collisions detected for this Year and Section time slot.
+              <strong style="display: flex; align-items: center; gap: 6px;">
+                <span>✓</span>
+                <span>Constraint Check: Clear</span>
+              </strong>
+              <div>No room double-occupancy, faculty workload, or student section conflicts detected for this time slot. Ready to commit.</div>
             </div>
           `;
         }
         if (submitBtn) submitBtn.disabled = false;
+      } else {
+        // Partial inputs filled and clear so far
+        let statusMsg = "Select the course, year & section, room, instructor, day, and times to check for conflicts.";
+        const verifiedList = [];
+        if (day && start && end && room) verifiedList.push(`Room ${room} is available`);
+        if (day && start && end && faculty) verifiedList.push(`Instructor ${candidate.facultyName || faculty} is available`);
+        if (day && start && end && program && year && section) verifiedList.push(`Section ${year} - ${section} has no class`);
+
+        if (verifiedList.length > 0) {
+          statusMsg = `<strong>🔍 Real-Time Conflict Check:</strong> ${verifiedList.join(' • ')} on ${day} (${window.SchedulerEngine.formatRange(start, end)}). Fill remaining fields to commit.`;
+        }
+
+        if (alertBox) {
+          alertBox.innerHTML = `
+            <div class="constraint-alert info">
+              ${statusMsg}
+            </div>
+          `;
+        }
+        if (submitBtn) submitBtn.disabled = true;
       }
     };
 
     ['schProgramSelect', 'schYearSelect', 'schSectionSelect', 'schRoomSelect', 'schCourseSelect', 'schFacultySelect', 'schDaySelect', 'schStartTime', 'schEndTime', 'schEnrollmentInput'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener('input', validateLive);
+      if (el) {
+        el.addEventListener('input', validateLive);
+        el.addEventListener('change', validateLive);
+      }
     });
 
     // Form submission
@@ -1651,15 +1767,32 @@ const appUi = {
 
       <div class="room-minimal-list">
         ${rooms.map(room => {
-          const isOcc = room.status === 'occupied';
+          const sess = window.appState.getRoomSessionInfo(room.code);
+          const isOcc = room.status === 'occupied' || sess.isOngoing;
           const isKeyBorrowed = room.keyStatus === 'Borrowed';
           const keyHolder = room.keyHolder || (isKeyBorrowed ? "In Custody" : "In Cabinet (Dean's Office)");
+
+          let badgeText = room.status;
+          let badgeClass = room.status;
+          if (sess.isOngoing) {
+            badgeText = 'In Session';
+            badgeClass = 'occupied';
+          } else if (room.status === 'occupied') {
+            badgeText = 'Occupied';
+            badgeClass = 'occupied';
+          } else if (sess.status === 'upcoming_today') {
+            badgeText = 'Available (Class Today)';
+            badgeClass = 'available';
+          } else {
+            badgeText = 'Available';
+            badgeClass = 'available';
+          }
 
           return `
             <div class="room-minimal-item ${isOcc ? 'occupied' : 'available'}">
               <div class="room-min-header">
                 <span class="room-min-code">${room.code} - ${room.name}</span>
-                <span class="badge-status ${room.status}">${room.status}</span>
+                <span class="badge-status ${badgeClass}">${badgeText}</span>
               </div>
 
               <!-- Explicit Key Status Row in Mobile -->
@@ -1673,11 +1806,23 @@ const appUi = {
                 Key Holder: <strong>${keyHolder}</strong>
               </div>
 
-              <div class="room-min-occupant">
-                ${isOcc && room.occupancy ? `
+              <div class="room-min-occupant ${isOcc ? 'in-session' : ''}">
+                ${sess.hasSession ? `
+                  <div style="font-size: 0.74rem; font-weight: 700; color: ${sess.isOngoing ? 'var(--c-red)' : 'var(--c-primary)'}; margin-bottom: 2px;">
+                    ${sess.isOngoing ? '🟢 Class Currently in Session:' : sess.status === 'upcoming_today' ? '🕒 Expected Session Today:' : '📅 Next Scheduled Session:'}
+                  </div>
+                  <div style="font-size: 0.76rem; font-weight: 600; color: var(--c-text);">
+                    ${sess.headline}
+                  </div>
+                  <div style="font-size: 0.7rem; color: var(--c-text-muted); margin-top: 2px; line-height: 1.35;">
+                    👨‍🏫 <strong>Instructor:</strong> ${sess.faculty}<br>
+                    👥 <strong>Section:</strong> ${sess.section}<br>
+                    ⏰ <strong>Time:</strong> ${sess.timeStr}
+                  </div>
+                ` : (isOcc && room.occupancy) ? `
                   <strong>Class:</strong> ${room.occupancy.class} (${room.occupancy.faculty || 'In session'})
                 ` : `
-                  Facility is available.
+                  <span style="color: var(--c-text-muted); font-size: 0.74rem;">No class currently occupying facility.</span>
                 `}
               </div>
             </div>
@@ -2084,6 +2229,237 @@ const appUi = {
       toast.style.opacity = '0';
       setTimeout(() => toast.remove(), 250);
     }, 3800);
+  },
+
+  /* ==========================================================================
+     NOTIFICATIONS & 7:00 PM CURFEW ALERTS
+     ========================================================================== */
+  toggleAdminNotifDropdown(e) {
+    if (e) e.stopPropagation();
+    const dropdown = document.getElementById('adminNotifDropdown');
+    if (!dropdown) return;
+    const isHidden = dropdown.classList.contains('hidden');
+    const mobDropdown = document.getElementById('mobileNotifDropdown');
+    if (mobDropdown) mobDropdown.classList.add('hidden');
+
+    if (isHidden) {
+      this.renderAdminNotifications();
+      dropdown.classList.remove('hidden');
+    } else {
+      dropdown.classList.add('hidden');
+    }
+  },
+
+  toggleMobileNotifDropdown(e) {
+    if (e) e.stopPropagation();
+    const dropdown = document.getElementById('mobileNotifDropdown');
+    if (!dropdown) return;
+    const isHidden = dropdown.classList.contains('hidden');
+    const adminDropdown = document.getElementById('adminNotifDropdown');
+    if (adminDropdown) adminDropdown.classList.add('hidden');
+
+    if (isHidden) {
+      this.renderMobileNotifications();
+      dropdown.classList.remove('hidden');
+    } else {
+      dropdown.classList.add('hidden');
+    }
+  },
+
+  updateNotifBadges() {
+    const adminBadge = document.getElementById('adminNotifBadge');
+    if (adminBadge && window.appState) {
+      const count = window.appState.getUnreadNotificationCount({ role: 'admin' });
+      adminBadge.textContent = count > 99 ? '99+' : count;
+      adminBadge.classList.toggle('hidden', count === 0);
+    }
+
+    const mobileBadge = document.getElementById('mobileNotifBadge');
+    if (mobileBadge && window.appState) {
+      const user = window.appState.getCurrentUser();
+      const count = window.appState.getUnreadNotificationCount(user);
+      mobileBadge.textContent = count > 99 ? '99+' : count;
+      mobileBadge.classList.toggle('hidden', count === 0);
+    }
+  },
+
+  renderAdminNotifications() {
+    const list = document.getElementById('adminNotifList');
+    if (!list || !window.appState) return;
+
+    const notifs = window.appState.getNotificationsForUser({ role: 'admin' });
+
+    if (notifs.length === 0) {
+      list.innerHTML = `
+        <div class="notif-empty">
+          <div style="font-size: 1.5rem; margin-bottom: 4px;">🎉</div>
+          <strong>All Caught Up!</strong>
+          <div>No pending key curfew alerts or problem tickets.</div>
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = notifs.map(n => {
+      const isUrgent = n.urgent || n.type === 'key_unreturned_alert';
+      const icon = n.type === 'key_unreturned_alert' ? '🚨' : n.type === 'problem_report' ? '⚠️' : 'ℹ️';
+      const timeStr = new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      return `
+        <div class="notif-item ${!n.read ? 'unread' : ''} ${isUrgent ? 'urgent' : ''}">
+          <div class="notif-item-icon">${icon}</div>
+          <div class="notif-item-content">
+            <div class="notif-item-title">
+              <span>${n.title}</span>
+              <span class="notif-item-time">${timeStr}</span>
+            </div>
+            <div class="notif-item-desc">${n.message}</div>
+            <div class="notif-item-action">
+              ${n.type === 'key_unreturned_alert' ? `
+                <button class="btn btn-xs btn-primary" onclick="appUi.inspectKeyFromNotif('${n.roomCode}')">
+                  📟 View Key Counter
+                </button>
+                <button class="btn btn-xs btn-secondary" onclick="appUi.switchAdminTab('keylogs')">
+                  View Logs
+                </button>
+              ` : n.relatedReportId ? `
+                <button class="btn btn-xs btn-primary" onclick="appUi.inspectReportFromNotif('${n.relatedReportId}')">
+                  🔍 Inspect Problem Ticket
+                </button>
+              ` : ''}
+              ${!n.read ? `
+                <button class="btn btn-xs btn-outline" onclick="window.appState.markNotificationAsRead('${n.id}'); appUi.renderAdminNotifications(); appUi.updateNotifBadges();">
+                  Dismiss
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  renderMobileNotifications() {
+    const list = document.getElementById('mobileNotifList');
+    if (!list || !window.appState) return;
+
+    const user = window.appState.getCurrentUser();
+    const notifs = window.appState.getNotificationsForUser(user);
+
+    if (notifs.length === 0) {
+      list.innerHTML = `
+        <div class="notif-empty">
+          <div style="font-size: 1.5rem; margin-bottom: 4px;">🔔</div>
+          <strong>No Alerts at this time</strong>
+          <div>You have no unreturned keys or pending notices.</div>
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = notifs.map(n => {
+      const isUrgent = n.urgent || n.type === 'key_unreturned_alert';
+      const icon = n.type === 'key_unreturned_alert' ? '🚨' : 'ℹ️';
+      const timeStr = new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      return `
+        <div class="notif-item ${!n.read ? 'unread' : ''} ${isUrgent ? 'urgent' : ''}">
+          <div class="notif-item-icon">${icon}</div>
+          <div class="notif-item-content">
+            <div class="notif-item-title">
+              <span>${n.title}</span>
+              <span class="notif-item-time">${timeStr}</span>
+            </div>
+            <div class="notif-item-desc">${n.message}</div>
+            <div class="notif-item-action">
+              ${n.type === 'key_unreturned_alert' ? `
+                <button class="btn btn-xs btn-danger" style="font-size: 0.68rem; padding: 3px 8px;" onclick="appUi.handleKeyReturnFromNotif('${n.roomCode}')">
+                  🔑 Return / Transfer Key Now &rarr;
+                </button>
+              ` : ''}
+              ${!n.read ? `
+                <button class="btn btn-xs btn-outline" style="font-size: 0.68rem; padding: 2px 6px;" onclick="window.appState.markNotificationAsRead('${n.id}'); appUi.renderMobileNotifications(); appUi.updateNotifBadges();">
+                  Dismiss
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  triggerCurfewAudit() {
+    if (!window.appState) return;
+    const generated = window.appState.checkCurfewKeyAlerts(true);
+    this.updateNotifBadges();
+    this.renderAdminNotifications();
+    this.renderMobileNotifications();
+    if (window.SoundManager && window.SoundManager.playOverdueAlarm) {
+      window.SoundManager.playOverdueAlarm();
+    }
+    this.showToast(`7:00 PM Key Curfew Audit executed. ${generated.length > 0 ? generated.length + ' key alert(s) dispatched!' : 'All keys safely in cabinet.'}`, generated.length > 0 ? 'error' : 'success');
+  },
+
+  markAllNotifsRead(context) {
+    if (window.appState) {
+      window.appState.markAllNotificationsAsRead(context);
+      this.updateNotifBadges();
+      this.renderAdminNotifications();
+      this.renderMobileNotifications();
+      this.showToast('All notifications marked as read.', 'success');
+    }
+  },
+
+  inspectKeyFromNotif(roomCode) {
+    this.switchAdminTab('keycounter');
+    const dropdown = document.getElementById('adminNotifDropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+  },
+
+  handleKeyReturnFromNotif(roomCode) {
+    this.switchMobileTab('transfer');
+    const dropdown = document.getElementById('mobileNotifDropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+  },
+
+  inspectReportFromNotif(reportId) {
+    const report = window.appState.data.reports.find(r => r.reportId === reportId);
+    if (!report) return;
+
+    this.switchAdminTab('reports');
+    const dropdown = document.getElementById('adminNotifDropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+
+    const modal = document.getElementById('genericDetailModal');
+    if (!modal) return;
+
+    document.getElementById('genericModalTitle').textContent = `Problem Ticket: ${report.reportId}`;
+    document.getElementById('genericModalBody').innerHTML = `
+      <div style="font-size: 0.85rem; line-height: 1.6;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--c-border); padding-bottom: 8px; margin-bottom: 12px;">
+          <div>
+            <strong style="color: var(--c-primary); font-size: 1rem;">${report.facility || report.roomCode}</strong>
+            <div style="font-size: 0.75rem; color: var(--c-text-muted);">Category: ${report.category}</div>
+          </div>
+          <span class="badge-status ${report.status === 'Resolved' ? 'available' : report.status === 'In Progress' ? 'pending' : 'occupied'}">
+            ${report.status}
+          </span>
+        </div>
+        <p><strong>Description:</strong><br>${report.description}</p>
+        <div style="background: var(--c-secondary-light); padding: 8px 12px; border-radius: var(--radius-sm); margin: 12px 0; font-size: 0.78rem;">
+          <div><strong>Reported By:</strong> ${report.reporterName} (${report.reporterRole} - ${report.reporterId})</div>
+          <div><strong>Submitted:</strong> ${new Date(report.timestamp).toLocaleString()}</div>
+        </div>
+        ${report.photoBase64 ? `
+          <div style="margin-top: 10px; text-align: center;">
+            <div style="font-size: 0.75rem; color: var(--c-text-muted); margin-bottom: 4px;">Photo Evidence:</div>
+            <img src="${report.photoBase64}" style="max-width: 100%; max-height: 280px; border-radius: 4px; border: 1px solid var(--c-border);" alt="Report photo">
+          </div>
+        ` : ''}
+      </div>
+    `;
+    modal.classList.add('active');
   }
 };
 

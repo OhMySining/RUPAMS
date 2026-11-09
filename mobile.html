@@ -47,7 +47,35 @@
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <!-- Mobile Notifications Bell & Dropdown -->
+          <div class="notif-wrapper" id="mobileNotifWrapper">
+            <button class="notif-bell-btn mobile-bell-btn" id="mobileNotifBellBtn" title="Alerts & Notices" onclick="appUi.toggleMobileNotifDropdown(event)">
+              <span class="notif-bell-icon">🔔</span>
+              <span class="notif-badge hidden" id="mobileNotifBadge">0</span>
+            </button>
+            
+            <!-- Mobile Notification Dropdown Panel -->
+            <div class="notif-dropdown mobile-notif-dropdown hidden" id="mobileNotifDropdown">
+              <div class="notif-dropdown-header">
+                <div>
+                  <strong style="font-size: 0.84rem; color: var(--c-primary);">Alerts & Curfew Notices</strong>
+                </div>
+                <div style="display: flex; gap: 4px;">
+                  <button class="btn btn-xs btn-outline" style="font-size: 0.65rem; padding: 2px 6px;" onclick="appUi.triggerCurfewAudit()" title="Simulate 7:00 PM key curfew audit">
+                    ⏱️ Test 7PM
+                  </button>
+                  <button class="btn btn-xs btn-secondary" style="font-size: 0.65rem; padding: 2px 6px;" onclick="appUi.markAllNotifsRead('user')">
+                    Mark Read
+                  </button>
+                </div>
+              </div>
+              <div class="notif-dropdown-body" id="mobileNotifList">
+                <!-- Dynamically injected -->
+              </div>
+            </div>
+          </div>
+
           <span class="mobile-user-tag" id="mobileUserNameTag" title="Tap to switch between Student & Faculty persona">
             Juan Dela Cruz (Student) ▾
           </span>
