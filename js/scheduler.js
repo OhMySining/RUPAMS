@@ -1,83 +1,107 @@
 /**
- * RUPAMS - Manual Schedule Creation Engine with Constraint Enforcement
- * & Automated Spreadsheet Output Module
+ * RUPAMS - Smart Collision Prevention & Scheduling Engine
+ * Enforces zero room overlap, zero instructor conflict, and zero student section clash.
  * College of Industrial Technology (CIT) - URS Morong Campus
  */
 
-const SchedulerEngine = {
+const ScheduleEngine = {
   DAYS: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
 
-  TIME_SLOTS: [
-    { start: "07:30", end: "10:30", label: "07:30 AM - 10:30 AM" },
-    { start: "10:30", end: "13:30", label: "10:30 AM - 01:30 PM" },
-    { start: "13:30", end: "16:30", label: "01:30 PM - 04:30 PM" },
-    { start: "16:30", end: "19:30", label: "04:30 PM - 07:30 PM" }
-  ],
-
-  timeToMinutes(timeStr) {
-    if (typeof timeStr !== 'string') return NaN;
-    const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(timeStr);
-    if (!match) return NaN;
-    const [, hours, minutes] = match;
-    const h = Number(hours);
-    const m = Number(minutes);
-    return h * 60 + m;
-  },
-
-  isOverlapping(start1, end1, start2, end2) {
-    const s1 = this.timeToMinutes(start1);
-    const e1 = this.timeToMinutes(end1);
-    const s2 = this.timeToMinutes(start2);
-    const e2 = this.timeToMinutes(end2);
-    return Math.max(s1, s2) < Math.min(e1, e2);
+  /**
+   * Helper: Convert 24h HH:mm string to 12-hour format with AM/PM
+   * e.g., "07:30" -> "07:30 AM", "13:30" -> "01:30 PM"
+   */
+  to12Hour(timeStr) {
+    if (!timeStr) return '';
+    const parts = timeStr.split(':');
+    if (parts.length < 2) return timeStr;
+    let h = parseInt(parts[0], 10);
+    const m = parts[1];
+    if (isNaN(h)) return timeStr;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h === 0) h = 12;
+    const hStr = h < 10 ? '0' + h : '' + h;
+    return `${hStr}:${m} ${ampm}`;
   },
 
   /**
-   * Real-Time Constraint Enforcement
-   * Verifies against all active database constraints before a manual schedule is committed.
+   * Helper: Format a time interval to 12-hour format
+   * e.g., ("07:30", "10:30") -> "07:30 AM - 10:30 AM"
+   */
+  formatRange(start, end) {
+    if (!start && !end) return '';
+    if (!end) return this.to12Hour(start);
+    return `${this.to12Hour(start)} - ${this.to12Hour(end)}`;
+  },
+
+  /**
+   * Helper: Convert HH:mm to minutes from midnight
+   */
+  timeToMinutes(timeStr) {
+    if (!timeStr) return 0;
+    const [hh, mm] = timeStr.split(':').map(Number);
+    return hh * 60 + mm;
+  },
+
+  /**
+   * Helper: Check if two time intervals overlap
+   */
+  isOverlapping(startA, endA, startB, endB) {
+    const sA = this.timeToMinutes(startA);
+    const eA = this.timeToMinutes(endA);
+    const sB = this.timeToMinutes(startB);
+    const eB = this.timeToMinutes(endB);
+    return Math.max(sA, sB) < Math.min(eA, eB);
+  },
+
+  /**
+   * Core Collision Detection Validator
+   * Validates a candidate schedule record against all committed schedules in state.
+   *
+   * @param {Object} candidate - { roomCode, day, startTime, endTime, facultyId, facultyName, program, year, section, courseCode }
+   * @param {string|null} excludeScheduleId - ID of schedule to ignore (for edits)
+   * @returns {Object} { isValid: boolean, errors: string[] }
    */
   validateSchedule(candidate, excludeScheduleId = null) {
-    const schedules = window.appState.data.schedules || [];
-    const rooms = window.appState.data.rooms || [];
-    const facultyList = window.appState.data.faculty || [];
-
     const errors = [];
-    const candidateRoom = rooms.find(r => r.code === candidate.roomCode);
-    const candidateFaculty = facultyList.find(f => f.id === candidate.facultyId);
+    const schedules = window.appState.data.schedules || [];
 
-    const startMinutes = this.timeToMinutes(candidate.startTime);
-    const endMinutes = this.timeToMinutes(candidate.endTime);
-    if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || startMinutes >= endMinutes) {
-      errors.push('Invalid Schedule Time: Choose a valid start time and an end time later than the start.');
+    // Basic logic validation
+    const sMin = this.timeToMinutes(candidate.startTime);
+    const eMin = this.timeToMinutes(candidate.endTime);
+
+    if (eMin <= sMin) {
+      errors.push("Invalid Time Interval: End time must be after start time.");
+    }
+    if (eMin - sMin < 30) {
+      errors.push("Minimum Duration Error: Scheduled periods must be at least 30 minutes.");
     }
 
-    // 1. Capacity Constraint
-    if (candidateRoom && candidate.enrolled && candidate.enrolled > candidateRoom.capacity) {
-      errors.push(`Room Capacity Exceeded: ${candidateRoom.name} holds max ${candidateRoom.capacity} students, but section enrollment is ${candidate.enrolled}.`);
-    }
-
-    // 2. Overlap Constraints against all existing schedules
+    // Check collisions against active schedules
     for (const item of schedules) {
       if (excludeScheduleId && item.id === excludeScheduleId) continue;
       if (item.day !== candidate.day) continue;
 
       if (this.isOverlapping(candidate.startTime, candidate.endTime, item.startTime, item.endTime)) {
+        const timeRangeStr = this.formatRange(item.startTime, item.endTime);
+
         // Room Collision
         if (item.roomCode === candidate.roomCode) {
-          errors.push(`Room Double-Occupancy Conflict: Facility ${candidate.roomCode} is already booked by "${item.courseCode} (${item.section})" with ${item.facultyName} from ${item.startTime} to ${item.endTime}.`);
+          errors.push(`Room Double-Occupancy Conflict: Facility ${candidate.roomCode} is already booked by "${item.courseCode} (${item.section})" with ${item.facultyName} from ${timeRangeStr}.`);
         }
 
         // Faculty Overlap
         if (item.facultyId === candidate.facultyId) {
-          errors.push(`Faculty Schedule Overlap: Instructor ${item.facultyName} is already assigned to teach "${item.courseCode}" in room ${item.roomCode} from ${item.startTime} to ${item.endTime}.`);
+          errors.push(`Faculty Schedule Overlap: Instructor ${item.facultyName} is already assigned to teach "${item.courseCode}" in room ${item.roomCode} from ${timeRangeStr}.`);
         }
 
         // Section Overlap
-        const candidateCohort = `${candidate.program || ''} - ${candidate.year || ''} - ${candidate.section || ''}`.toLowerCase();
-        const itemCohort = `${item.program || ''} - ${item.year || ''} - ${item.section || ''}`.toLowerCase();
+        const candidateYearSection = `${candidate.program || ''} - ${candidate.year || ''} - ${candidate.section || ''}`.toLowerCase();
+        const itemYearSection = `${item.program || ''} - ${item.year || ''} - ${item.section || ''}`.toLowerCase();
 
-        if (candidateCohort && itemCohort && candidateCohort === itemCohort) {
-          errors.push(`Student Section Clash: Cohort "${candidate.program} (${candidate.year} - ${candidate.section})" is already scheduled in room ${item.roomCode} for "${item.courseCode}" from ${item.startTime} to ${item.endTime}.`);
+        if (candidateYearSection && itemYearSection && candidateYearSection === itemYearSection) {
+          errors.push(`Student Section Clash: Year and Section "${candidate.program} (${candidate.year} - ${candidate.section})" is already scheduled in room ${item.roomCode} for "${item.courseCode}" from ${timeRangeStr}.`);
         }
       }
     }
@@ -98,14 +122,17 @@ const SchedulerEngine = {
     }
 
     const newId = `SCH-${Date.now().toString().slice(-4)}`;
-    const scheduleItem = {
+    const newSchedule = {
       id: newId,
-      ...formData
+      ...formData,
+      enrolled: Number(formData.enrolled) || 30
     };
 
-    window.appState.addSchedule(scheduleItem);
-    return { success: true, schedule: scheduleItem };
+    window.appState.addSchedule(newSchedule);
+    return { success: true, schedule: newSchedule };
   }
 };
 
-window.SchedulerEngine = SchedulerEngine;
+// Export to both namespaces for absolute reliability
+window.ScheduleEngine = ScheduleEngine;
+window.SchedulerEngine = ScheduleEngine;

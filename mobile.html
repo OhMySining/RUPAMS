@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CIT Mobile Portal - Students & Faculty | URS Morong</title>
+  
+  <!-- Favicon & Mobile Touch Icon -->
+  <link rel="icon" type="image/jpeg" href="assets/CITLogo.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="assets/CITLogo.jpg">
+  <link rel="apple-touch-icon" href="assets/CITLogo.jpg">
+
+  <!-- Minimalist Light Design Tokens -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/mobile.css">
+</head>
+<body style="background-color: #f1f5f9;">
+
+  <!-- ==========================================================================
+       ADMINISTRATOR NOTICE BANNER (Only displayed if Admin visits mobile app)
+       ========================================================================== -->
+  <div id="mobileAdminNotice" class="hidden" style="background: #eff6ff; border-bottom: 1px solid #bfdbfe; padding: 10px 16px; font-size: 0.78rem; display: flex; justify-content: space-between; align-items: center; z-index: 1000; position: sticky; top: 0;">
+    <div>
+      <strong style="color: #1e40af;">Admin Notice:</strong>
+      <span style="color: #1e3a5f;">Viewing mobile app as Administrator. Your administrative tools are in Admin Portal (PC).</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <a href="admin.html" class="btn btn-primary btn-xs" style="font-size: 0.72rem; padding: 4px 8px;">
+        &larr; Return to Admin Portal (PC)
+      </a>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MOBILE WEB APP (STUDENTS & FACULTY)
+       ========================================================================== -->
+  <main id="mobileAppContainer" class="mobile-viewport-container">
+    <div class="mobile-card-shell">
+      
+      <!-- Top Mobile Navigation Bar -->
+      <div class="mobile-top-bar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <img src="assets/CITLogo.jpg" alt="CIT Logo" class="mobile-brand-logo-img">
+          <div>
+            <span class="mobile-title" style="display: block; line-height: 1.1;">CIT Mobile Portal</span>
+            <small style="font-size: 0.65rem; color: var(--c-text-muted);">URS Morong • Industrial Technology</small>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="mobile-user-tag" id="mobileUserNameTag" title="Tap to switch between Student & Faculty persona">
+            Juan Dela Cruz (Student) ▾
+          </span>
+          <button class="btn btn-secondary btn-xs btn-logout-trigger" onclick="window.appState.logout()" style="font-size: 0.68rem; padding: 3px 8px; cursor: pointer;" title="Sign out and return to Landing Page">
+            🚪 Exit
+          </button>
+        </div>
+      </div>
+
+      <!-- Clean 4-Tab Navigation Bar -->
+      <nav class="mobile-tabs-nav">
+        <button class="m-tab-btn active" data-tab="rooms">
+          Rooms Status
+        </button>
+        <button class="m-tab-btn" data-tab="schedule">
+          Class Schedule
+        </button>
+        <button class="m-tab-btn" data-tab="transfer">
+          Key Transfer
+        </button>
+        <button class="m-tab-btn" data-tab="report">
+          Report Problem
+        </button>
+      </nav>
+
+      <!-- Mobile Content Container -->
+      <div class="mobile-body" id="mobileDynamicBody">
+        <!-- Injected dynamically via appUi.renderMobileView() -->
+      </div>
+    </div>
+  </main>
+
+  <!-- ==========================================================================
+       MODAL: FULL PHOTO INSPECTION & DETAILS
+       ========================================================================== -->
+  <div class="modal-overlay" id="genericDetailModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="genericModalTitle">Report Details</h3>
+        <button class="btn-close" onclick="appUi.closeModal('genericDetailModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="genericModalBody">
+        <!-- Dynamically injected -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="appUi.closeModal('genericDetailModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL: USER SWITCHER PERSONA (FACULTY VS STUDENT)
+       ========================================================================== -->
+  <div class="modal-overlay" id="userSwitcherModal">
+    <div class="modal-dialog" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3>Switch Mobile Identity</h3>
+        <button class="btn-close" onclick="appUi.closeModal('userSwitcherModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.8rem; color: var(--c-text-muted); margin-bottom: 12px;">
+          Select a role to test faculty teaching load vs student section schedule & key transfer:
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="padding: 10px; border: 1px solid var(--c-border); border-radius: var(--radius-sm); cursor: pointer; background: var(--c-surface);" onclick="appUi.selectUserPreset('student')">
+            <strong style="color: var(--c-primary); font-size: 0.85rem;">Juan Dela Cruz</strong>
+            <div style="font-size: 0.74rem; color: var(--c-text-muted);">Student (3rd Year BSIT Electronics - Section A)</div>
+          </div>
+
+          <div style="padding: 10px; border: 1px solid var(--c-border); border-radius: var(--radius-sm); cursor: pointer; background: var(--c-surface);" onclick="appUi.selectUserPreset('faculty')">
+            <strong style="color: var(--c-primary); font-size: 0.85rem;">Engr. Maria Elena Bautista</strong>
+            <div style="font-size: 0.74rem; color: var(--c-text-muted);">Faculty (Electronics Technology Dept.)</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--c-border); text-align: center;">
+          <a href="index.html" class="btn btn-secondary btn-xs" style="font-size: 0.74rem;">
+            Sign in with a different account
+          </a>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-danger btn-sm btn-logout-trigger" onclick="window.appState.logout()">Sign Out</button>
+        <button class="btn btn-secondary btn-sm" onclick="appUi.closeModal('userSwitcherModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="js/audio.js"></script>
+  <script src="js/mockData.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/scheduler.js"></script>
+  <script src="js/keyManagement.js"></script>
+  <script src="js/qrNfcSim.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

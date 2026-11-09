@@ -3,200 +3,361 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RUPAMS - Room Utilization & Physical Access Management System | URS Morong</title>
+  <title>RUPAMS - Sign In & Portal Landing | URS Morong College of Industrial Technology</title>
   
-  <!-- Minimalist Light Design Tokens -->
+  <!-- Favicon & Touch Icon -->
+  <link rel="icon" type="image/jpeg" href="assets/CITLogo.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="assets/CITLogo.jpg">
+  <link rel="apple-touch-icon" href="assets/CITLogo.jpg">
+  
+  <!-- Minimalist Light Design Tokens & Auth Styles -->
   <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="css/admin.css">
-  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/auth.css">
 </head>
-<body>
+<body class="auth-page-body">
 
-  <!-- ==========================================================================
-       TOP GLOBAL HEADER (Minimalist Light Theme)
-       ========================================================================== -->
-  <header class="global-header">
-    <div class="brand-section">
-      <div class="brand-badge">CIT</div>
-      <div class="brand-info">
-        <h1>RUPAMS</h1>
-        <span>University of Rizal System Morong • College of Industrial Technology</span>
-      </div>
-    </div>
-
-    <!-- Live Time -->
-    <div class="header-center">
-      <span class="header-time-pill" id="liveClockTime">--:--:-- (PST)</span>
-    </div>
-
-    <!-- Right Controls: View Switcher & Demo User Persona -->
-    <div class="header-right">
-      <div class="mode-toggle">
-        <button id="btnAdminView" class="active">Admin Portal (PC)</button>
-        <button id="btnMobileView">Mobile Web App</button>
-      </div>
-
-      <div class="user-badge" id="userProfileTrigger" title="Switch User Identity">
-        <div>
-          <strong id="headerUserName">Dr. Liezel Fernando</strong>
-          <small id="headerUserRole">(ADMIN)</small>
+  <div class="auth-layout-container">
+    
+    <!-- ==========================================================================
+         LEFT HERO PANEL (65% width on PC): Campus Backdrop & Institutional Presentation
+         ========================================================================== -->
+    <aside class="auth-hero-panel">
+      
+      <!-- Top Institutional Identity -->
+      <div class="auth-hero-header">
+        <img src="assets/CITLogo.jpg" alt="CIT Logo" class="auth-hero-logo">
+        <div class="auth-hero-inst-info">
+          <h2>University of Rizal System</h2>
+          <span>Morong Campus • College of Industrial Technology</span>
         </div>
       </div>
-    </div>
-  </header>
 
-  <!-- ==========================================================================
-       VIEW CONTAINER 1: ADMIN WEB PORTAL (WEB PC)
-       ========================================================================== -->
-  <main id="adminPortalContainer" class="admin-layout">
-    <aside class="admin-sidebar">
-      <nav class="sidebar-menu">
-        <button class="nav-link active" data-tab="dashboard">
-          <span>📊</span>
-          <span>Room Status</span>
-        </button>
+      <!-- Center Hero Message & Metrics -->
+      <div class="auth-hero-center">
+        <div class="auth-hero-badge-pill">
+          <span>🏛️</span>
+          <span>Official Institutional Portal • Academic Year 2026-2027</span>
+        </div>
 
-        <button class="nav-link" data-tab="schedules">
-          <span>📝</span>
-          <span>Schedule Creator</span>
-        </button>
+        <h1 class="auth-hero-title">
+          Room Utilization &<br>
+          <span>Physical Access Management</span>
+        </h1>
 
-        <button class="nav-link" data-tab="spreadsheet">
-          <span>📑</span>
-          <span>Spreadsheet Output</span>
-        </button>
-
-        <button class="nav-link" data-tab="keycounter">
-          <span>📟</span>
-          <span>Key Counter</span>
-        </button>
-
-        <button class="nav-link" data-tab="keylogs">
-          <span>🔑</span>
-          <span>Key Logs</span>
-        </button>
-
-        <button class="nav-link" data-tab="reports">
-          <span>⚠️</span>
-          <span>Problem Reports</span>
-        </button>
-      </nav>
-
-      <div class="sidebar-bottom">
-        <strong>URS Morong Campus</strong><br>
-        College of Industrial Technology<br>
-        Access & Scheduling System
-      </div>
-    </aside>
-
-    <section class="admin-main" id="adminDynamicContent">
-      <!-- Injected dynamically via appUi.renderAdminView() -->
-    </section>
-  </main>
-
-  <!-- ==========================================================================
-       VIEW CONTAINER 2: MOBILE WEB APP (STUDENTS & FACULTY)
-       Features:
-       1. Minimalist Rooms Availability Dashboard
-       2. Published Class Schedule Timetable (Per Year & Section)
-       3. Peer-to-Peer Return/Borrow Key Transfer (NFC + QR)
-       4. Submit Facility Problem Report (with picture upload)
-       ========================================================================== -->
-  <main id="mobileAppContainer" class="mobile-viewport-container hidden">
-    <div class="mobile-card-shell">
-      <div class="mobile-top-bar">
-        <span class="mobile-title">CIT Mobile Portal</span>
-        <span class="mobile-user-tag" id="mobileUserNameTag" title="Tap to switch user persona">Juan Dela Cruz (Student) ▾</span>
-      </div>
-
-      <!-- Clean 4-Tab Bar -->
-      <nav class="mobile-tabs-nav">
-        <button class="m-tab-btn active" data-tab="rooms">
-          Rooms Status
-        </button>
-        <button class="m-tab-btn" data-tab="schedule">
-          Class Schedule
-        </button>
-        <button class="m-tab-btn" data-tab="transfer">
-          Key Transfer
-        </button>
-        <button class="m-tab-btn" data-tab="report">
-          Report Problem
-        </button>
-      </nav>
-
-      <!-- Mobile Content Container -->
-      <div class="mobile-body" id="mobileDynamicBody">
-        <!-- Injected dynamically via appUi.renderMobileView() -->
-      </div>
-    </div>
-  </main>
-
-  <!-- ==========================================================================
-       MODAL: FULL PHOTO INSPECTION & DETAILS
-       ========================================================================== -->
-  <div class="modal-overlay" id="genericDetailModal">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 id="genericModalTitle">Report Details</h3>
-        <button class="btn-close" onclick="appUi.closeModal('genericDetailModal')">&times;</button>
-      </div>
-      <div class="modal-body" id="genericModalBody">
-        <!-- Dynamically injected -->
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary btn-sm" onclick="appUi.closeModal('genericDetailModal')">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==========================================================================
-       MODAL: USER SWITCHER PERSONA
-       ========================================================================== -->
-  <div class="modal-overlay" id="userSwitcherModal">
-    <div class="modal-dialog" style="max-width: 420px;">
-      <div class="modal-header">
-        <h3>Switch Evaluation Identity</h3>
-        <button class="btn-close" onclick="appUi.closeModal('userSwitcherModal')">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size: 0.8rem; color: var(--c-text-muted); margin-bottom: 12px;">
-          Select a persona to test admin scheduling vs student/faculty mobile actions:
+        <p class="auth-hero-subtitle">
+          Centralized campus scheduling intelligence, collision-free timetable allocation across 84 Year & Sections, physical RFID key cabinet logging, and instant laboratory facility problem reporting.
         </p>
 
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <div style="padding: 10px; border: 1px solid var(--c-border); border-radius: var(--radius-sm); cursor: pointer;" onclick="appUi.selectUserPreset('admin')">
-            <strong style="color: var(--c-primary); font-size: 0.85rem;">Dr. Liezel Fernando</strong>
-            <div style="font-size: 0.74rem; color: var(--c-text-muted);">Admin (Program Head / Dean's Office)</div>
+        <!-- 4 Institutional Pillars -->
+        <div class="auth-hero-pillars">
+          <div class="pillar-card">
+            <div class="pillar-header">
+              <span class="pillar-icon">🏛️</span>
+              <span class="pillar-title">7 CIT Degree Programs</span>
+            </div>
+            <p class="pillar-desc">
+              Automotive, Electrical, Electronics, Computer, Mechanical, Drafting, and Food Service Management.
+            </p>
           </div>
 
-          <div style="padding: 10px; border: 1px solid var(--c-border); border-radius: var(--radius-sm); cursor: pointer;" onclick="appUi.selectUserPreset('faculty')">
-            <strong style="color: var(--c-primary); font-size: 0.85rem;">Engr. Maria Elena Bautista</strong>
-            <div style="font-size: 0.74rem; color: var(--c-text-muted);">Faculty (Electronics Dept.)</div>
+          <div class="pillar-card">
+            <div class="pillar-header">
+              <span class="pillar-icon">📅</span>
+              <span class="pillar-title">84 Year & Sections</span>
+            </div>
+            <p class="pillar-desc">
+              Over 330 collision-free courses with zero room overlap, instructor conflict, or section collision.
+            </p>
           </div>
 
-          <div style="padding: 10px; border: 1px solid var(--c-border); border-radius: var(--radius-sm); cursor: pointer;" onclick="appUi.selectUserPreset('student')">
-            <strong style="color: var(--c-primary); font-size: 0.85rem;">Juan Dela Cruz</strong>
-            <div style="font-size: 0.74rem; color: var(--c-text-muted);">Student (3rd Year BSIT Electronics - Section A)</div>
+          <div class="pillar-card">
+            <div class="pillar-header">
+              <span class="pillar-icon">🔑</span>
+              <span class="pillar-title">Physical Key Custody</span>
+            </div>
+            <p class="pillar-desc">
+              Real-time cabinet tracking with NFC/RFID checkouts and peer-to-peer student-faculty key transfers.
+            </p>
+          </div>
+
+          <div class="pillar-card">
+            <div class="pillar-header">
+              <span class="pillar-icon">📱</span>
+              <span class="pillar-title">Mobile Timetable Sync</span>
+            </div>
+            <p class="pillar-desc">
+              Instant schedule publishing directly to student smartphones and faculty mobile dashboards.
+            </p>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary btn-sm" onclick="appUi.closeModal('userSwitcherModal')">Cancel</button>
+
+      <!-- Bottom Campus Information -->
+      <footer class="auth-hero-footer">
+        <div>
+          <strong>Sumulong Campus</strong> • Morong, Rizal, Philippines
+        </div>
+        <div>
+          College of Industrial Technology (CIT) • RUPAMS v5.0
+        </div>
+      </footer>
+    </aside>
+
+    <!-- ==========================================================================
+         RIGHT PANEL (35% width on PC): Sign In & Registration Card
+         (On Mobile: Serves as the simple centered sign in with campus background)
+         ========================================================================== -->
+    <main class="auth-form-panel">
+      <div class="auth-form-container">
+        
+        <!-- Header Branding -->
+        <div class="auth-brand-badge-row">
+          <img src="assets/CITLogo.jpg" alt="CIT Logo" class="auth-brand-logo">
+          <div class="auth-brand-text">
+            <h3>CIT RUPAMS</h3>
+            <span>University of Rizal System Morong</span>
+          </div>
+        </div>
+
+        <!-- Active Session Resume Banner (If user is already signed in) -->
+        <div id="activeSessionBanner" class="active-session-banner hidden">
+          <div>
+            Currently signed in as: <strong id="sessionUserName">User</strong> 
+            <small id="sessionUserRole" style="font-weight: 700; color: #1e3a5f;">(ROLE)</small>
+          </div>
+          <div class="active-session-actions">
+            <button id="sessionContinueBtn" class="btn btn-primary btn-sm" style="flex: 1; font-size: 0.78rem;">
+              Continue to Portal &rarr;
+            </button>
+            <button id="btnSessionLogout" class="btn btn-secondary btn-sm" style="font-size: 0.78rem;">
+              Sign Out
+            </button>
+          </div>
+        </div>
+
+        <!-- Target Portal Switcher -->
+        <div class="portal-target-selector">
+          <button id="btnPortalTargetAdmin" class="portal-target-btn active" title="Access for Administrators and Dean's Office">
+            <span>💻</span>
+            <span>Admin Portal (PC)</span>
+          </button>
+          <button id="btnPortalTargetMobile" class="portal-target-btn" title="Access for Faculty Professors and Students">
+            <span>📱</span>
+            <span>Mobile Web App</span>
+          </button>
+        </div>
+
+        <!-- Action Switcher (Sign In vs Sign Up) -->
+        <div class="auth-action-tabs">
+          <button id="tabAuthSignIn" class="auth-action-tab active">Sign In</button>
+          <button id="tabAuthSignUp" class="auth-action-tab">Create Account</button>
+        </div>
+
+        <!-- ====================================================================
+             FORM 1: SIGN IN
+             ==================================================================== -->
+        <div id="boxSignIn">
+          <div id="signinAlert" style="display: none;"></div>
+
+          <form id="formSignIn" class="auth-form">
+            <!-- Role Selection Indicator -->
+            <div class="auth-form-group">
+              <label>Select Your Institutional Role:</label>
+              <div class="role-pills-row">
+                <button type="button" class="role-pill-btn active" data-role="admin">Admin (PC)</button>
+                <button type="button" class="role-pill-btn" data-role="faculty">Faculty</button>
+                <button type="button" class="role-pill-btn" data-role="student">Student</button>
+              </div>
+            </div>
+
+            <!-- ID / Username -->
+            <div class="auth-form-group">
+              <label for="signinIdentifier">Institutional ID / Username:</label>
+              <input type="text" id="signinIdentifier" placeholder="e.g. ADM-001, FAC-001, or 2024-0012" required autofocus>
+              <small>Admins: ADM-001 • Faculty: FAC-001 • Students: 2024-0012-MR</small>
+            </div>
+
+            <!-- Password -->
+            <div class="auth-form-group">
+              <label for="signinPassword">Password:</label>
+              <input type="password" id="signinPassword" placeholder="••••••••" value="admin123" required>
+            </div>
+
+            <button type="submit" id="btnSignInSubmit" class="btn-auth-submit">
+              Sign In to Admin Portal (PC) &rarr;
+            </button>
+          </form>
+
+          <!-- One-Click Quick Demo Sign In Box -->
+          <div class="quick-demo-box">
+            <div class="quick-demo-title">
+              <span>Quick Demo 1-Click Evaluation</span>
+              <span>⚡ Fast Access</span>
+            </div>
+            <div class="quick-demo-list">
+              <button type="button" class="quick-demo-btn" onclick="authManager.quickLogin('admin')">
+                <div>
+                  <strong>👤 Dr. Liezel Fernando</strong><br>
+                  <span>Admin • Program Head / Dean's Office</span>
+                </div>
+                <span style="font-weight: 700; color: var(--c-primary);">&rarr; PC Portal</span>
+              </button>
+
+              <button type="button" class="quick-demo-btn" onclick="authManager.quickLogin('faculty')">
+                <div>
+                  <strong>👨‍🏫 Engr. Maria Elena Bautista</strong><br>
+                  <span>Faculty • Electronics Technology Dept.</span>
+                </div>
+                <span style="font-weight: 700; color: var(--c-primary);">&rarr; Mobile App</span>
+              </button>
+
+              <button type="button" class="quick-demo-btn" onclick="authManager.quickLogin('student')">
+                <div>
+                  <strong>🎓 Juan Dela Cruz</strong><br>
+                  <span>Student • 3rd Year BSIT Electronics (Sec A)</span>
+                </div>
+                <span style="font-weight: 700; color: var(--c-primary);">&rarr; Mobile App</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====================================================================
+             FORM 2: SIGN UP / REGISTRATION
+             ==================================================================== -->
+        <div id="boxSignUp" class="hidden">
+          <div id="signupAlert" style="display: none;"></div>
+
+          <form id="formSignUp" class="auth-form">
+            <!-- Role Selection -->
+            <div class="auth-form-group">
+              <label>Select Role to Register:</label>
+              <div class="role-pills-row">
+                <button type="button" class="role-pill-btn active" data-role="admin">Admin</button>
+                <button type="button" class="role-pill-btn" data-role="faculty">Faculty</button>
+                <button type="button" class="role-pill-btn" data-role="student">Student</button>
+              </div>
+            </div>
+
+            <!-- Full Name -->
+            <div class="auth-form-group">
+              <label for="signupName">Full Legal Name:</label>
+              <input type="text" id="signupName" placeholder="e.g. Prof. Ricardo Santos or Maria Reyes" required>
+            </div>
+
+            <!-- Institutional Email -->
+            <div class="auth-form-group">
+              <label for="signupEmail">Institutional Email:</label>
+              <input type="email" id="signupEmail" placeholder="e.g. name@urs.edu.ph">
+            </div>
+
+            <!-- DYNAMIC FIELDS: ADMIN -->
+            <div id="signupAdminFields">
+              <div class="auth-form-group">
+                <label for="signupAdminOffice">CIT Office / Administration Unit:</label>
+                <input type="text" id="signupAdminOffice" placeholder="e.g. Dean's Office / Program Head" value="Dean's Office">
+              </div>
+
+              <div class="auth-form-group">
+                <label for="signupAdminId">Admin Employee ID:</label>
+                <input type="text" id="signupAdminId" placeholder="e.g. ADM-002">
+              </div>
+
+              <div class="auth-form-group">
+                <label for="signupAdminPasscode">Admin Authorization Passcode:</label>
+                <input type="password" id="signupAdminPasscode" placeholder="Enter security key (Hint: CIT-ADMIN-2026)">
+                <small>Requires Dean's Office administrative authorization passcode.</small>
+              </div>
+            </div>
+
+            <!-- DYNAMIC FIELDS: FACULTY -->
+            <div id="signupFacultyFields" class="hidden">
+              <div class="auth-form-group">
+                <label for="signupFacultyDept">CIT Academic Department:</label>
+                <select id="signupFacultyDept">
+                  <option value="Electronics Technology">Electronics Technology</option>
+                  <option value="Computer Technology">Computer Technology</option>
+                  <option value="Electrical Technology">Electrical Technology</option>
+                  <option value="Automotive Technology">Automotive Technology</option>
+                  <option value="Mechanical Technology">Mechanical Technology</option>
+                  <option value="Drafting Technology">Drafting Technology</option>
+                  <option value="Food Service Management">Food Service Management</option>
+                </select>
+              </div>
+
+              <div class="auth-form-group">
+                <label for="signupFacultyId">Faculty Employee ID:</label>
+                <input type="text" id="signupFacultyId" placeholder="e.g. FAC-002">
+              </div>
+            </div>
+
+            <!-- DYNAMIC FIELDS: STUDENT -->
+            <div id="signupStudentFields" class="hidden">
+              <div class="auth-form-group">
+                <label for="signupStudentId">Student ID Number:</label>
+                <input type="text" id="signupStudentId" placeholder="e.g. 2026-0045-MR">
+              </div>
+
+              <div class="auth-form-group">
+                <label for="signupStudentProg">Degree Program:</label>
+                <select id="signupStudentProg">
+                  <option value="BSIT - Electronics Technology">BSIT - Electronics Technology</option>
+                  <option value="BSIT - Computer Technology">BSIT - Computer Technology</option>
+                  <option value="BSIT - Electrical Technology">BSIT - Electrical Technology</option>
+                  <option value="BSIT - Automotive Technology">BSIT - Automotive Technology</option>
+                  <option value="BSIT - Mechanical Technology">BSIT - Mechanical Technology</option>
+                  <option value="BSIT - Drafting Technology">BSIT - Drafting Technology</option>
+                  <option value="BSIT - Food Service Management">BSIT - Food Service Management</option>
+                </select>
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <div class="auth-form-group" style="flex: 1;">
+                  <label for="signupStudentYear">Year Level:</label>
+                  <select id="signupStudentYear">
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                    <option value="4th Year">4th Year</option>
+                  </select>
+                </div>
+
+                <div class="auth-form-group" style="flex: 1;">
+                  <label for="signupStudentSec">Section:</label>
+                  <select id="signupStudentSec">
+                    <option value="Section A">Section A</option>
+                    <option value="Section B">Section B</option>
+                    <option value="Section C">Section C</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Password & Confirm -->
+            <div class="auth-form-group">
+              <label for="signupPassword">Create Password:</label>
+              <input type="password" id="signupPassword" placeholder="Minimum 6 characters" value="password123" required>
+            </div>
+
+            <div class="auth-form-group">
+              <label for="signupConfirmPassword">Confirm Password:</label>
+              <input type="password" id="signupConfirmPassword" placeholder="Re-type password" value="password123" required>
+            </div>
+
+            <button type="submit" class="btn-auth-submit">
+              Complete Registration & Enter &rarr;
+            </button>
+          </form>
+        </div>
+
       </div>
-    </div>
+    </main>
+
   </div>
 
-  <!-- Toast Notification Container -->
-  <div id="toastContainer"></div>
-
   <!-- Scripts -->
-  <script src="js/audio.js"></script>
   <script src="js/mockData.js"></script>
   <script src="js/state.js"></script>
-  <script src="js/scheduler.js"></script>
-  <script src="js/keyManagement.js"></script>
-  <script src="js/qrNfcSim.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
 </body>
 </html>

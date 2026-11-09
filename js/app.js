@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RUPAMS - Main Application Controller & View Orchestrator
  * University of Rizal System Morong Campus - College of Industrial Technology
  * Minimalist Light Edition
@@ -69,6 +69,14 @@ const appUi = {
       });
     }
 
+    // Global Logout handlers for all sign out triggers
+    document.querySelectorAll('.btn-logout-trigger').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.appState.logout();
+      });
+    });
+
     // Role switcher modal click (desktop header and mobile topbar)
     const userBadge = document.getElementById('userProfileTrigger');
     if (userBadge) {
@@ -101,7 +109,12 @@ const appUi = {
       const now = new Date();
       const clockEl = document.getElementById('liveClockTime');
       if (clockEl) {
-        clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' (PST)';
+        clockEl.textContent = now.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        }) + ' (PST)';
       }
     };
     update();
@@ -129,9 +142,27 @@ const appUi = {
   render() {
     this.updateUserHeader();
 
-    const isMobileMode = window.appState.viewMode === 'mobile';
     const adminContainer = document.getElementById('adminPortalContainer');
     const mobileContainer = document.getElementById('mobileAppContainer');
+
+    // Standalone Admin Portal (admin.html)
+    if (adminContainer && !mobileContainer) {
+      if (!this.checkAdminAccess()) return;
+      adminContainer.classList.remove('hidden');
+      this.renderAdminView();
+      return;
+    }
+
+    // Standalone Mobile Web App (mobile.html)
+    if (mobileContainer && !adminContainer) {
+      if (!this.checkMobileAccess()) return;
+      mobileContainer.classList.remove('hidden');
+      this.renderMobileView();
+      return;
+    }
+
+    // Dual-container fallback
+    const isMobileMode = window.appState.viewMode === 'mobile';
     const btnAdminView = document.getElementById('btnAdminView');
     const btnMobileView = document.getElementById('btnMobileView');
 
@@ -149,12 +180,48 @@ const appUi = {
     }
   },
 
+  checkAdminAccess() {
+    const user = window.appState.getCurrentUser();
+    const overlay = document.getElementById('accessRestrictionOverlay');
+    if (!user || user.role !== 'admin') {
+      if (overlay) {
+        overlay.classList.remove('hidden');
+        const roleSpan = document.getElementById('currentRestrictedRole');
+        if (roleSpan) roleSpan.textContent = user ? `${user.name} (${user.role.toUpperCase()})` : 'Not Signed In';
+      } else {
+        window.location.href = 'index.html';
+      }
+      return false;
+    }
+    if (overlay) overlay.classList.add('hidden');
+    return true;
+  },
+
+  checkMobileAccess() {
+    const user = window.appState.getCurrentUser();
+    if (!user) {
+      window.location.href = 'index.html';
+      return false;
+    }
+    const adminNotice = document.getElementById('mobileAdminNotice');
+    if (user.role === 'admin') {
+      if (adminNotice) adminNotice.classList.remove('hidden');
+    } else {
+      if (adminNotice) adminNotice.classList.add('hidden');
+    }
+    return true;
+  },
+
   updateUserHeader() {
-    const user = window.appState.currentUser;
+    const user = window.appState.getCurrentUser();
+    if (!user) return;
     const nameEl = document.getElementById('headerUserName');
     const roleEl = document.getElementById('headerUserRole');
     if (nameEl) nameEl.textContent = user.name;
     if (roleEl) roleEl.textContent = user.role.toUpperCase();
+
+    const mobileNameEl = document.getElementById('mobileUserNameTag');
+    if (mobileNameEl) mobileNameEl.textContent = `${user.name} (${user.role.toUpperCase()}) â–¾`;
   },
 
   /* ==========================================================================
@@ -450,7 +517,7 @@ const appUi = {
             <tbody>
               ${filteredSchedules.length > 0 ? filteredSchedules.map(s => `
                 <tr>
-                  <td><strong>${s.day}</strong><br><small style="color: var(--c-text-muted);">${s.startTime} - ${s.endTime}</small></td>
+                  <td><strong>${s.day}</strong><br><small style="color: var(--c-text-muted);">${window.ScheduleEngine.formatRange(s.startTime, s.endTime)}</small></td>
                   <td>
                     <strong>${s.year || 'N/A'} - ${s.section || 'A'}</strong>
                     <div style="font-size: 0.7rem; color: var(--c-text-muted);">${s.program || 'BSIT'}</div>
@@ -511,7 +578,7 @@ const appUi = {
         if (alertBox) {
           alertBox.innerHTML = `
             <div class="constraint-alert info">
-              Select the course, cohort, room, instructor, day, and times to check for conflicts.
+              Select the course, year & section, room, instructor, day, and times to check for conflicts.
             </div>
           `;
         }
@@ -535,7 +602,7 @@ const appUi = {
           alertBox.innerHTML = `
             <div class="constraint-alert success">
               <strong>Constraint Check: Clear</strong><br>
-              No room, faculty, or section collisions detected for this cohort time slot.
+              No room, faculty, or section collisions detected for this Year and Section time slot.
             </div>
           `;
         }
@@ -639,21 +706,21 @@ const appUi = {
 
   /**
    * 3. Admin: Automated Spreadsheet Output
-   * Displays distinct Year & Section cohort selector, weekly schedule matrix, and mobile publishing
+   * Displays distinct Year & Section selector, weekly schedule matrix, and mobile publishing
    */
   getAdminSpreadsheetHTML() {
     const data = window.appState.data;
     const inst = data.institution;
-    const distinctCohorts = window.appState.getDistinctYearSections();
+    const distinctSections = window.appState.getDistinctYearSections();
 
-    if (!this.spreadsheetSelectedCohortKey && distinctCohorts.length > 0) {
-      this.spreadsheetSelectedCohortKey = distinctCohorts[0].key;
+    if (!this.spreadsheetSelectedSectionKey && distinctSections.length > 0) {
+      this.spreadsheetSelectedSectionKey = distinctSections[0].key;
     }
 
-    const selectedKey = this.spreadsheetSelectedCohortKey || (distinctCohorts[0] ? distinctCohorts[0].key : 'ALL');
+    const selectedKey = this.spreadsheetSelectedSectionKey || (distinctSections[0] ? distinctSections[0].key : 'ALL');
     const isAll = selectedKey === 'ALL';
-    const schedules = window.appState.getSchedulesByCohortKey(selectedKey);
-    const isPublished = window.appState.isCohortPublished(selectedKey);
+    const schedules = window.appState.getSchedulesByYearSection(selectedKey);
+    const isPublished = window.appState.isYearSectionPublished(selectedKey);
 
     const totalUnits = schedules.reduce((sum, s) => {
       const course = data.courses.find(c => c.code === s.courseCode);
@@ -662,10 +729,10 @@ const appUi = {
 
     const matrixDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const timeSlots = [
-      { label: "07:30 - 10:30", start: "07:30", end: "10:30", desc: "Morning Block" },
-      { label: "10:30 - 13:30", start: "10:30", end: "13:30", desc: "Mid-Day Block" },
-      { label: "13:30 - 16:30", start: "13:30", end: "16:30", desc: "Afternoon Block" },
-      { label: "16:30 - 19:30", start: "16:30", end: "19:30", desc: "Evening Extension" }
+      { label: "07:30 AM - 10:30 AM", start: "07:30", end: "10:30", desc: "Morning Block" },
+      { label: "10:30 AM - 01:30 PM", start: "10:30", end: "13:30", desc: "Mid-Day Block" },
+      { label: "01:30 PM - 04:30 PM", start: "13:30", end: "16:30", desc: "Afternoon Block" },
+      { label: "04:30 PM - 07:30 PM", start: "16:30", end: "19:30", desc: "Evening Extension" }
     ];
 
     const findCourseInSlot = (day, slot) => {
@@ -679,7 +746,7 @@ const appUi = {
       <div class="content-title-bar">
         <div>
           <h2>Automated Spreadsheet Output Module</h2>
-          <p>Official Semestral Academic Timetables with distinct Year & Section cohorts, weekly schedule matrix, and direct publishing to student & faculty mobile apps.</p>
+          <p>Official Semestral Academic Timetables with distinct Year and Sections, weekly schedule matrix, and direct publishing to student & faculty mobile apps.</p>
         </div>
         <div style="display: flex; gap: 8px;">
           <button class="btn btn-primary btn-sm" onclick="window.appState.exportSpreadsheetCSV('${selectedKey}')">
@@ -701,15 +768,15 @@ const appUi = {
         <!-- Distinct Year & Section Dropdown & Publication Toolbar -->
         <div class="spreadsheet-toolbar">
           <div class="spreadsheet-selector-group">
-            <label for="spreadsheetCohortSelect">Select Year & Section:</label>
-            <select id="spreadsheetCohortSelect" class="form-control" style="font-weight: 600; font-size: 0.82rem; min-width: 320px;">
-              ${distinctCohorts.map(c => `
+            <label for="spreadsheetSectionSelect">Select Year & Section:</label>
+            <select id="spreadsheetSectionSelect" class="form-control" style="font-weight: 600; font-size: 0.82rem; min-width: 320px;">
+              ${distinctSections.map(c => `
                 <option value="${c.key}" ${selectedKey === c.key ? 'selected' : ''}>
-                  ${c.displayName} [${window.appState.getSchedulesByCohortKey(c.key).length} Courses]
+                  ${c.displayName} [${window.appState.getSchedulesByYearSection(c.key).length} Courses]
                 </option>
               `).join('')}
               <option value="ALL" ${selectedKey === 'ALL' ? 'selected' : ''}>
-                ALL Cohorts / Full Master Timetable (${data.schedules.length} Courses)
+                ALL Year & Sections / Full Master Timetable (${data.schedules.length} Courses)
               </option>
             </select>
           </div>
@@ -718,41 +785,41 @@ const appUi = {
             <span class="pub-status-badge ${isPublished ? 'published' : 'draft'}">
               ${isPublished ? '● Officially Published to Mobile' : '○ Draft Mode (Not Published)'}
             </span>
-            <button id="btnTogglePublishCohort" class="btn ${isPublished ? 'btn-outline' : 'btn-primary'} btn-sm">
+            <button id="btnTogglePublishSection" class="btn ${isPublished ? 'btn-outline' : 'btn-primary'} btn-sm">
               ${isPublished ? 'Unpublish from Mobile' : '📢 Publish Timetable to Mobile App'}
             </button>
-            <button id="btnPublishAllCohorts" class="btn btn-outline btn-sm" title="Publish all distinct year & sections to mobile">
-              Publish All Cohorts
+            <button id="btnPublishAllSections" class="btn btn-outline btn-sm" title="Publish all distinct year & sections to mobile">
+              Publish All Year and Sections
             </button>
           </div>
         </div>
 
-        <!-- Cohort Summary Stats -->
+        <!-- Year & Section Summary Stats -->
         ${!isAll ? `
-          <div class="cohort-info-card">
-            <div class="cohort-stat-item">
-              <span class="cohort-stat-label">Program & Major</span>
-              <span class="cohort-stat-val" style="font-size: 0.82rem;">${schedules[0] ? schedules[0].program : 'CIT Program'}</span>
+          <div class="year-section-info-card">
+            <div class="year-section-stat-item">
+              <span class="year-section-stat-label">Program & Major</span>
+              <span class="year-section-stat-val" style="font-size: 0.82rem;">${schedules[0] ? schedules[0].program : 'CIT Program'}</span>
             </div>
-            <div class="cohort-stat-item">
-              <span class="cohort-stat-label">Year & Section</span>
-              <span class="cohort-stat-val">${schedules[0] ? `${schedules[0].year} - ${schedules[0].section}` : 'N/A'}</span>
+            <div class="year-section-stat-item">
+              <span class="year-section-stat-label">Year & Section</span>
+              <span class="year-section-stat-val">${schedules[0] ? `${schedules[0].year} - ${schedules[0].section}` : 'N/A'}</span>
             </div>
-            <div class="cohort-stat-item">
-              <span class="cohort-stat-label">Scheduled Courses</span>
-              <span class="cohort-stat-val">${schedules.length} Subjects</span>
+            <div class="year-section-stat-item">
+              <span class="year-section-stat-label">Scheduled Courses</span>
+              <span class="year-section-stat-val">${schedules.length} Subjects</span>
             </div>
-            <div class="cohort-stat-item">
-              <span class="cohort-stat-label">Total Units</span>
-              <span class="cohort-stat-val">${totalUnits} Units</span>
+            <div class="year-section-stat-item">
+              <span class="year-section-stat-label">Total Units</span>
+              <span class="year-section-stat-val">${totalUnits} Units</span>
             </div>
-            <div class="cohort-stat-item">
-              <span class="cohort-stat-label">Section Size</span>
-              <span class="cohort-stat-val">${schedules[0] ? schedules[0].enrolled : 28} Students</span>
+            <div class="year-section-stat-item">
+              <span class="year-section-stat-label">Section Size</span>
+              <span class="year-section-stat-val">${schedules[0] ? schedules[0].enrolled : 28} Students</span>
             </div>
-            <div class="cohort-stat-item">
-              <span class="cohort-stat-label">Constraint Status</span>
-              <span class="cohort-stat-val" style="color: var(--c-green); font-size: 0.8rem;">✓ 0 Collisions</span>
+            <div class="year-section-stat-item">
+              <span class="year-section-stat-label">Constraint Status</span>
+              <span class="year-section-stat-val" style="color: var(--c-green); font-size: 0.8rem;">✓ 0 Collisions</span>
             </div>
           </div>
 
@@ -795,7 +862,7 @@ const appUi = {
                                   👨‍🏫 ${match.facultyName}
                                 </div>
                                 <div style="font-size: 0.65rem; color: var(--c-text-muted);">
-                                  ⏰ ${match.startTime} - ${match.endTime}
+                                  ⏰ ${window.ScheduleEngine.formatRange(match.startTime, match.endTime)}
                                 </div>
                               </div>
                             </div>
@@ -844,7 +911,7 @@ const appUi = {
                   <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
                     <td>
                       <strong>${s.day}</strong><br>
-                      <small style="color: var(--c-text-muted);">${s.startTime} - ${s.endTime}</small>
+                      <small style="color: var(--c-text-muted);">${window.ScheduleEngine.formatRange(s.startTime, s.endTime)}</small>
                     </td>
                     <td>${s.program || 'BSIT'}</td>
                     <td><strong>${s.year || ''} - ${s.section || ''}</strong></td>
@@ -865,19 +932,19 @@ const appUi = {
   },
 
   bindAdminSpreadsheetEvents() {
-    const cohortSelect = document.getElementById('spreadsheetCohortSelect');
-    if (cohortSelect) {
-      cohortSelect.addEventListener('change', (e) => {
-        this.spreadsheetSelectedCohortKey = e.target.value;
+    const sectionSelect = document.getElementById('spreadsheetSectionSelect');
+    if (sectionSelect) {
+      sectionSelect.addEventListener('change', (e) => {
+        this.spreadsheetSelectedSectionKey = e.target.value;
         this.renderAdminView();
       });
     }
 
-    const btnTogglePublish = document.getElementById('btnTogglePublishCohort');
+    const btnTogglePublish = document.getElementById('btnTogglePublishSection');
     if (btnTogglePublish) {
       btnTogglePublish.addEventListener('click', () => {
-        const key = this.spreadsheetSelectedCohortKey;
-        const isPub = window.appState.isCohortPublished(key);
+        const key = this.spreadsheetSelectedSectionKey;
+        const isPub = window.appState.isYearSectionPublished(key);
         if (isPub) {
           window.appState.unpublishTimetable(key);
           this.showToast(`Timetable for "${key}" unpublished from Mobile App.`, 'info');
@@ -889,7 +956,7 @@ const appUi = {
       });
     }
 
-    const btnPublishAll = document.getElementById('btnPublishAllCohorts');
+    const btnPublishAll = document.getElementById('btnPublishAllSections');
     if (btnPublishAll) {
       btnPublishAll.addEventListener('click', () => {
         window.appState.publishTimetable('ALL');
@@ -1243,7 +1310,7 @@ const appUi = {
               return `
                 <tr>
                   <td style="white-space: nowrap; font-family: monospace; font-size: 0.76rem;">
-                    ${new Date(t.timestamp).toLocaleString()}
+                    ${new Date(t.timestamp).toLocaleString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
                   </td>
                   <td>
                     <span class="badge-status ${actionClass}">
@@ -1321,7 +1388,7 @@ const appUi = {
               <tr>
                 <td>
                   <strong>${r.reportId}</strong><br>
-                  <small style="color: var(--c-text-muted);">${new Date(r.timestamp).toLocaleTimeString()}</small>
+                  <small style="color: var(--c-text-muted);">${new Date(r.timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}</small>
                 </td>
                 <td><strong>${r.roomCode}</strong></td>
                 <td><span style="font-weight: 600; color: var(--c-primary);">${r.category}</span></td>
@@ -1376,7 +1443,7 @@ const appUi = {
     const mobileBody = document.getElementById('mobileDynamicBody');
     if (!mobileBody) return;
 
-    const user = window.appState.currentUser;
+    const user = window.appState.getCurrentUser() || (window.appState.data.demoUsers ? window.appState.data.demoUsers.student : null);
     const nameEl = document.getElementById('mobileUserNameTag');
     if (nameEl) nameEl.textContent = `${user.name} (${user.role.toUpperCase()}) ▾`;
 
@@ -1406,19 +1473,19 @@ const appUi = {
    * Filtered by student's/faculty's Year & Section with quick selector and day filtering
    */
   getMobileScheduleHTML() {
-    const user = window.appState.currentUser;
+    const user = window.appState.getCurrentUser() || (window.appState.data.demoUsers ? window.appState.data.demoUsers.student : null);
     const data = window.appState.data;
-    const distinctCohorts = window.appState.getDistinctYearSections();
+    const distinctSections = window.appState.getDistinctYearSections();
 
-    // Default cohort based on active user
-    let cohortKey = this.mobileSelectedCohortKey;
-    if (!cohortKey) {
+    // Default Year & Section based on active user
+    let sectionKey = this.mobileSelectedSectionKey;
+    if (!sectionKey) {
       if (user.role === 'student' && user.program && user.year && user.section) {
-        cohortKey = `${user.program} | ${user.year} - ${user.section}`;
+        sectionKey = `${user.program} | ${user.year} - ${user.section}`;
       } else {
-        cohortKey = distinctCohorts[0] ? distinctCohorts[0].key : 'ALL';
+        sectionKey = distinctSections[0] ? distinctSections[0].key : 'ALL';
       }
-      this.mobileSelectedCohortKey = cohortKey;
+      this.mobileSelectedSectionKey = sectionKey;
     }
 
     const isFaculty = user.role === 'faculty';
@@ -1430,7 +1497,7 @@ const appUi = {
         return s.facultyId === user.id || (user.name && s.facultyName && s.facultyName.includes(user.name.split(' ').pop()));
       });
     } else {
-      schedulesToShow = window.appState.getSchedulesByCohortKey(cohortKey);
+      schedulesToShow = window.appState.getSchedulesByYearSection(sectionKey);
     }
 
     // Filter by day if selected
@@ -1439,7 +1506,7 @@ const appUi = {
       ? schedulesToShow
       : schedulesToShow.filter(s => s.day === activeDay);
 
-    const isPublished = isTeachingLoadMode ? true : window.appState.isCohortPublished(cohortKey);
+    const isPublished = isTeachingLoadMode ? true : window.appState.isYearSectionPublished(sectionKey);
     const days = ["ALL", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
     return `
@@ -1456,23 +1523,23 @@ const appUi = {
             <button class="btn btn-sm ${isTeachingLoadMode ? 'btn-primary' : 'btn-outline'}" id="btnMobileFacultyMyLoad" style="flex: 1; font-size: 0.72rem; padding: 4px;">
               My Teaching Load (${(data.schedules || []).filter(s => s.facultyId === user.id).length})
             </button>
-            <button class="btn btn-sm ${!isTeachingLoadMode ? 'btn-primary' : 'btn-outline'}" id="btnMobileFacultyCohort" style="flex: 1; font-size: 0.72rem; padding: 4px;">
-              Year & Section Timetable
+            <button class="btn btn-sm ${!isTeachingLoadMode ? 'btn-primary' : 'btn-outline'}" id="btnMobileFacultySection" style="flex: 1; font-size: 0.72rem; padding: 4px;">
+              Year and Section Timetable
             </button>
           </div>
         ` : ''}
 
         ${!isTeachingLoadMode ? `
-          <div class="mobile-cohort-selector-box">
-            <label for="mobileCohortSelect">Select Year & Section:</label>
-            <select id="mobileCohortSelect" class="form-control" style="font-size: 0.78rem; font-weight: 600;">
-              ${distinctCohorts.map(c => `
-                <option value="${c.key}" ${cohortKey === c.key ? 'selected' : ''}>
+          <div class="mobile-section-selector-box">
+            <label for="mobileSectionSelect">Select Year & Section:</label>
+            <select id="mobileSectionSelect" class="form-control" style="font-size: 0.78rem; font-weight: 600;">
+              ${distinctSections.map(c => `
+                <option value="${c.key}" ${sectionKey === c.key ? 'selected' : ''}>
                   ${c.displayName}
                 </option>
               `).join('')}
             </select>
-            <div class="mobile-cohort-meta">
+            <div class="mobile-section-meta">
               <span>Courses: <strong>${schedulesToShow.length} Subjects</strong></span>
               <span>Enrollment: <strong>${schedulesToShow[0] ? schedulesToShow[0].enrolled : 28} Students</strong></span>
             </div>
@@ -1513,14 +1580,14 @@ const appUi = {
               <div class="mobile-course-card">
                 <div class="mobile-course-top">
                   <span class="mobile-day-tag">📅 ${s.day}</span>
-                  <span class="mobile-time-pill">⏰ ${s.startTime} - ${s.endTime}</span>
+                  <span class="mobile-time-pill">⏰ ${window.ScheduleEngine.formatRange(s.startTime, s.endTime)}</span>
                 </div>
                 <div class="mobile-course-code">${s.courseCode}</div>
                 <div class="mobile-course-title">${s.courseTitle || 'Laboratory Course'}</div>
                 <div class="mobile-course-details">
                   <span>📍 <strong>Facility:</strong> ${s.roomCode} - ${roomInfo ? roomInfo.name : 'Lab'}</span>
                   <span>👨‍🏫 <strong>Instructor:</strong> ${s.facultyName}</span>
-                  <span>👥 <strong>Cohort:</strong> ${s.year} - ${s.section} (${s.program})</span>
+                  <span>👥 <strong>Year and Section:</strong> ${s.year} - ${s.section} (${s.program})</span>
                   <span>📊 <strong>Academic Units:</strong> ${units} Units • Cap: ${s.enrolled || 28} Students</span>
                 </div>
               </div>
@@ -1536,10 +1603,10 @@ const appUi = {
   },
 
   bindMobileScheduleEvents() {
-    const cohortSelect = document.getElementById('mobileCohortSelect');
-    if (cohortSelect) {
-      cohortSelect.addEventListener('change', (e) => {
-        this.mobileSelectedCohortKey = e.target.value;
+    const sectionSelect = document.getElementById('mobileSectionSelect');
+    if (sectionSelect) {
+      sectionSelect.addEventListener('change', (e) => {
+        this.mobileSelectedSectionKey = e.target.value;
         this.renderMobileView();
       });
     }
@@ -1559,10 +1626,10 @@ const appUi = {
       });
     }
 
-    const btnCohort = document.getElementById('btnMobileFacultyCohort');
-    if (btnCohort) {
-      btnCohort.addEventListener('click', () => {
-        this.mobileFacultyViewMode = 'cohort';
+    const btnSection = document.getElementById('btnMobileFacultySection');
+    if (btnSection) {
+      btnSection.addEventListener('click', () => {
+        this.mobileFacultyViewMode = 'section';
         this.renderMobileView();
       });
     }
@@ -1626,7 +1693,7 @@ const appUi = {
    * Step 2: Shows Camera / QR Scanner UI
    */
   getMobileTransferHTML() {
-    const user = window.appState.currentUser;
+    const user = window.appState.getCurrentUser() || (window.appState.data.demoUsers ? window.appState.data.demoUsers.student : null);
     const personalQrSvg = window.QRNfcSimulator.generatePersonalQRSVG(user.qrCodeData || user.id, 130);
 
     return `
@@ -1965,7 +2032,7 @@ const appUi = {
         const room = document.getElementById('repRoomSelect').value;
         const category = document.getElementById('repCategorySelect').value;
         const description = document.getElementById('repDescriptionInput').value;
-        const user = window.appState.currentUser;
+        const user = window.appState.getCurrentUser() || (window.appState.data.demoUsers ? window.appState.data.demoUsers.student : null);
 
         window.appState.addProblemReport({
           roomCode: room,
